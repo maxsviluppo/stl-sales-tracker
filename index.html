@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 STL Sales Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-cube"></i>
+                <span>STL Tracker</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="#" class="nav-item" data-page="platforms">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span>Piattaforme</span>
+                </a>
+                <a href="#" class="nav-item" data-page="history">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Storico</span>
+                </a>
+                <a href="#" class="nav-item" data-page="settings">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Impostazioni</span>
+                </a>
+            </nav>
+            <div class="user-profile">
+                <div class="avatar">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div class="user-info">
+                    <span class="name">Admin</span>
+                    <span class="status">Online</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h1>Dashboard</h1>
+                    <p class="subtitle">Panoramica vendite in tempo reale</p>
+                </div>
+                <div class="actions">
+                    <button id="add-sale-btn" class="btn-success">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Nuova Vendita</span>
+                    </button>
+                    <button id="test-sound-btn" class="btn-icon" title="Test Suono">
+                        <i class="fa-solid fa-bell"></i>
+                    </button>
+                    <button id="refresh-btn" class="btn-primary">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>Aggiorna</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view active">
+                <div class="stats-grid">
+                    <div class="stat-card glass">
+                        <div class="stat-icon sales">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Vendite Oggi</h3>
+                            <p class="stat-value" id="today-count">0</p>
+                            <span class="stat-trend positive">
+                                <i class="fa-solid fa-arrow-trend-up"></i>
+                                <span>vs ieri</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass">
+                        <div class="stat-icon revenue">
+                            <i class="fa-solid fa-euro-sign"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Incasso Oggi</h3>
+                            <p class="stat-value" id="today-amount">€0.00</p>
+                            <span class="stat-trend positive">
+                                <i class="fa-solid fa-arrow-trend-up"></i>
+                                <span>vs ieri</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass">
+                        <div class="stat-icon month">
+                            <i class="fa-solid fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Questo Mese</h3>
+                            <p class="stat-value" id="month-amount">€0.00</p>
+                            <span class="stat-trend neutral">
+                                <span>Totale parziale</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass">
+                        <div class="stat-icon year">
+                            <i class="fa-solid fa-trophy"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Anno Corrente</h3>
+                            <p class="stat-value" id="year-amount">€0.00</p>
+                            <span class="stat-trend neutral">
+                                <span>Totale progressivo</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-section">
+                    <div class="chart-container glass">
+                        <div class="chart-header">
+                            <h3>Andamento Settimanale</h3>
+                            <div class="chart-actions">
+                                <select id="chart-period">
+                                    <option value="7">7 Giorni</option>
+                                    <option value="30">30 Giorni</option>
+                                </select>
+                            </div>
+                        </div>
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                    <div class="platform-breakdown glass">
+                        <h3>Top Piattaforme (Oggi)</h3>
+                        <div class="platform-list" id="platform-list"></div>
+                    </div>
+                </div>
+
+                <div class="recent-sales glass">
+                    <div class="section-header">
+                        <h3>Ultime Vendite</h3>
+                        <a href="#" class="view-all">Vedi tutte</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="sales-table">
+                            <thead>
+                                <tr>
+                                    <th>Piattaforma</th>
+                                    <th>Prodotto</th>
+                                    <th>Data</th>
+                                    <th>Importo</th>
+                                    <th>Stato</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-sales-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settings-view" class="view">
+                <div class="glass" style="padding: 2rem; margin-bottom: 1.5rem;">
+                    <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-bell"></i> Notifiche</h2>
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
+                            <div>
+                                <h4 style="margin-bottom: 0.25rem;">Suono Notifica</h4>
+                                <p style="color: #94a3b8; font-size: 0.875rem;">Riproduci un suono quando arriva una
+                                    nuova vendita</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="sound-toggle" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
+                            <div>
+                                <h4 style="margin-bottom: 0.25rem;">Notifiche Browser</h4>
+                                <p style="color: #94a3b8; font-size: 0.875rem;">Mostra notifiche desktop quando la
+                                    dashboard non è in primo piano</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="notification-toggle" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <div class="modal-content glass">
+                                <div class="modal-header">
+                                    <h2><i class="fa-solid fa-cart-plus"></i> Nuova Vendita</h2>
+                                    <button class="modal-close" id="close-modal">&times;</button>
+                                </div>
+                                <form id="sale-form">
+                                    <div class="form-group">
+                                        <label for="platform-select">Piattaforma</label>
+                                        <select id="platform-select" required>
+                                            <option value="">Seleziona piattaforma...</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="product-name">Nome Prodotto</label>
+                                        <input type="text" id="product-name" placeholder="es. Dragon Skull STL"
+                                            required>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="amount">Importo</label>
+                                            <input type="number" id="amount" step="0.01" min="0" placeholder="0.00"
+                                                required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="currency">Valuta</label>
+                                            <select id="currency">
+                                                <option value="EUR">EUR (€)</option>
+                                                <option value="USD">USD ($)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-actions">
+                                        <button type="button" class="btn-secondary" id="cancel-btn">Annulla</button>
+                                        <button type="submit" class="btn-success">
+                                            <i class="fa-solid fa-check"></i>
+                                            Salva Vendita
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <audio id="cash-sound" src="cash-register.mp3" preload="auto"></audio>
+                        <script src="supabase-config.js"></script>
+                        <script src="script.js"></script>
+</body>
+
+</html>

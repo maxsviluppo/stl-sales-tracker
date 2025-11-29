@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Analytics - STL Sales Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-chart-bar"></i>
+                <span>Analytics</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item active">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h1>📊 Analytics Avanzate</h1>
+                    <p class="subtitle">Statistiche dettagliate e confronti tra piattaforme</p>
+                </div>
+                <div class="actions">
+                    <button id="refresh-analytics-btn" class="btn-primary">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>Aggiorna</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Platform Performance Summary -->
+            <div class="glass" style="margin-bottom: 2rem; padding: 1.5rem;">
+                <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-layer-group" style="color: #6366f1;"></i>
+                    Riepilogo Piattaforme
+                </h3>
+                <div id="platforms-summary"></div>
+            </div>
+
+            <!-- Comparison Charts -->
+            <div class="glass" style="margin-bottom: 2rem;">
+                <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                    <h3 style="margin-bottom: 1rem;">
+                        <i class="fa-solid fa-chart-column"></i> Confronto Piattaforme
+                    </h3>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <select id="chart-metric"
+                            style="padding: 0.8rem; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary);">
+                            <option value="revenue">Ricavo</option>
+                            <option value="sales">Vendite</option>
+                            <option value="avg">Prezzo Medio</option>
+                        </select>
+                        <select id="chart-timeframe"
+                            style="padding: 0.8rem; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary);">
+                            <option value="7">Ultimi 7 giorni</option>
+                            <option value="30">Ultimi 30 giorni</option>
+                            <option value="90">Ultimi 90 giorni</option>
+                        </select>
+                        <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+                            <button class="btn-icon" id="chart-type-line" title="Grafico a Linee">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </button>
+                            <button class="btn-icon" id="chart-type-bar" title="Grafico a Barre">
+                                <i class="fa-solid fa-chart-bar"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 1.5rem;">
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Platform Distribution -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                <div class="glass" style="padding: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem;">
+                        <i class="fa-solid fa-pie-chart"></i> Distribuzione Ricavi
+                    </h3>
+                    <canvas id="revenueDistChart"></canvas>
+                </div>
+                <div class="glass" style="padding: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem;">
+                        <i class="fa-solid fa-chart-pie"></i> Distribuzione Vendite
+                    </h3>
+                    <canvas id="salesDistChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Products -->
+            <div class="glass" style="margin-bottom: 2rem;">
+                <h3 style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                    <i class="fa-solid fa-trophy"></i> Top 20 Prodotti
+                </h3>
+                <div class="table-responsive">
+                    <table class="sales-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Prodotto</th>
+                                <th>Vendite</th>
+                                <th>Ricavo Totale</th>
+                                <th>Prezzo Medio</th>
+                                <th>Piattaforme</th>
+                            </tr>
+                        </thead>
+                        <tbody id="top-products-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Products by Platform -->
+            <div class="glass">
+                <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                    <h3 style="margin-bottom: 1rem;">
+                        <i class="fa-solid fa-filter"></i> Prodotti per Piattaforma
+                    </h3>
+                    <select id="platform-filter"
+                        style="width: 100%; padding: 0.8rem; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary);">
+                        <option value="">Tutte le piattaforme</option>
+                    </select>
+                </div>
+                <div class="table-responsive">
+                    <table class="sales-table">
+                        <thead>
+                            <tr>
+                                <th>Prodotto</th>
+                                <th>Piattaforma</th>
+                                <th>Vendite</th>
+                                <th>Ricavo</th>
+                                <th>Prezzo Medio</th>
+                                <th>Prima Vendita</th>
+                                <th>Ultima Vendita</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-by-platform-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="supabase-config.js"></script>
+    <script src="analytics-advanced.js"></script>
+</body>
+
+</html>

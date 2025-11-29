@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autorizza Gmail - STL Sales Tracker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 1rem;
+        }
+
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        select,
+        button {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1rem;
+            border-radius: 12px;
+            border: 2px solid #ddd;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            display: block;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔐 Autorizza Gmail</h1>
+        <p>
+            Seleziona l'account Gmail da autorizzare per leggere le email di vendita.
+        </p>
+
+        <select id="email-select">
+            <option value="mysculp3d@gmail.com">mysculp3d@gmail.com</option>
+            <option value="ispirelab@gmail.com">ispirelab@gmail.com</option>
+            <option value="castromassimo@gmail.com">castromassimo@gmail.com</option>
+        </select>
+
+        <button id="auth-btn">Autorizza Account Selezionato</button>
+
+        <div id="status" class="status"></div>
+
+        <p style="font-size: 0.85rem; color: #999; margin-top: 2rem;">
+            Verrai reindirizzato a Google per confermare l'autorizzazione.
+        </p>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://zhgpccmzgyertwnvyiaz.supabase.co';
+
+        document.getElementById('auth-btn').addEventListener('click', async () => {
+            const email = document.getElementById('email-select').value;
+            const btn = document.getElementById('auth-btn');
+
+            btn.disabled = true;
+            btn.textContent = 'Caricamento...';
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/gmail-auth?email=${encodeURIComponent(email)}`);
+                const data = await response.json();
+
+                if (data.authUrl) {
+                    window.location.href = data.authUrl;
+                } else {
+                    showStatus('Errore nel generare il link di autorizzazione', 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Autorizza Account Selezionato';
+                }
+            } catch (error) {
+                showStatus('Errore: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = 'Autorizza Account Selezionato';
+            }
+        });
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+    </script>
+</body>
+
+</html>
