@@ -1,17 +1,9 @@
 // STL Sales Tracker - Core Logic
 
-// Configuration
-const CONFIG = {
-    notificationSound: true,
-    enablePushNotifications: true,
-    emailCheckInterval: 7200000 // 2 hours in milliseconds
-};
-
 // Global state for tracking sales
 let lastSalesCount = 0;
 let isFirstLoad = true;
 let selectedPlatformId = null; // null = all platforms
-let currentSalesLimit = 5; // Default limit
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('STL Sales Tracker Initialized');
@@ -24,14 +16,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load Data
     await loadDashboardData();
 
-    // Setup Sales Limit Selector
-    const salesLimitSelect = document.getElementById('sales-limit-select');
-    if (salesLimitSelect) {
-        salesLimitSelect.addEventListener('change', async (e) => {
-            currentSalesLimit = parseInt(e.target.value);
-            await loadRecentSales(currentSalesLimit);
-        });
-    }
+    // Setup Refresh Button
+    document.getElementById('refresh-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('refresh-btn');
+        const icon = btn.querySelector('i');
+
+        icon.classList.add('fa-spin');
+        await loadDashboardData();
+        setTimeout(() => icon.classList.remove('fa-spin'), 1000);
+    });
 
     // Start auto-refresh every 2 hours (matches email check interval)
     startAutoRefresh();
@@ -326,7 +319,7 @@ async function loadDailyTotals() {
 }
 
 
-async function loadRecentSales(limit = currentSalesLimit) {
+async function loadRecentSales() {
     const { data, error } = await supabase
         .from('sales')
         .select(`
@@ -334,7 +327,7 @@ async function loadRecentSales(limit = currentSalesLimit) {
             platforms (name)
         `)
         .order('sale_date', { ascending: false })
-        .limit(limit);
+        .limit(5);
 
     if (error) {
         console.error('Error fetching sales:', error);
