@@ -89,6 +89,41 @@ async function setupPlatformFilter() {
 }
 
 // --- Navigation ---
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    const views = document.querySelectorAll('.view');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            const currentItem = e.currentTarget;
+
+            // Allow navigation for real links (like analytics.html)
+            const href = currentItem.getAttribute('href');
+            if (href && href !== '#' && !href.startsWith('javascript')) {
+                return;
+            }
+
+            e.preventDefault();
+
+            const pageId = currentItem.getAttribute('data-page');
+            if (!pageId) return;
+
+            // Remove active class from all internal nav items
+            navItems.forEach(nav => {
+                if (nav.getAttribute('href') === '#') {
+                    nav.classList.remove('active');
+                }
+            });
+
+            views.forEach(view => view.classList.remove('active'));
+
+            // Add active to current
+            currentItem.classList.add('active');
+            const view = document.getElementById(`${pageId}-view`);
+            if (view) view.classList.add('active');
+        });
+    });
+}
 
 // --- Sound System ---
 function setupSound() {
