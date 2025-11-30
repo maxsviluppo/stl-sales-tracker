@@ -1,0 +1,33 @@
+/* Mobile Responsive Fixes for Chart Section */
+@media (max-width: 768px) {
+    .charts-section {
+        grid-template-columns: 1fr !important;
+        gap: 2rem;
+    }
+
+    .chart-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
+
+    .chart-actions {
+        width: 100%;
+        justify-content: space-between !important;
+    }
+
+    #date-range-picker {
+        right: auto !important;
+        left: 0 !important;
+        width: calc(100% - 2rem);
+        max-width: 300px;
+    }
+
+    .platform-breakdown {
+        margin-top: 2rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+}

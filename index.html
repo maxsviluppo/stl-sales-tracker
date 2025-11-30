@@ -11,6 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="mobile-menu.css">
+    <link rel="stylesheet" href="mobile-fixes.css">
 </head>
 
 <body>
@@ -136,7 +137,8 @@
                     <div class="chart-container glass">
                         <div class="chart-header">
                             <h3>Andamento Settimanale</h3>
-                            <div class="chart-actions" style="display: flex; align-items: center; gap: 0.5rem; position: relative;">
+                            <div class="chart-actions"
+                                style="display: flex; align-items: center; gap: 0.5rem; position: relative;">
                                 <select id="chart-period">
                                     <option value="today">Oggi</option>
                                     <option value="yesterday">Ieri</option>
@@ -144,15 +146,20 @@
                                     <option value="30">30 Giorni</option>
                                     <option value="90">90 Giorni</option>
                                 </select>
-                                <button id="custom-date-btn" class="btn-icon" style="color: #10b981; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                                <button id="custom-date-btn" class="btn-icon"
+                                    style="color: #10b981; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
                                     <i class="fa-solid fa-calendar-days"></i>
                                 </button>
-                                <div id="date-range-picker" style="display: none; position: absolute; top: 3rem; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); padding: 1rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100; flex-direction: column; gap: 0.5rem;">
+                                <div id="date-range-picker"
+                                    style="display: none; position: absolute; top: 3rem; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); padding: 1rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100; flex-direction: column; gap: 0.5rem;">
                                     <label style="font-size: 0.8rem; color: var(--text-secondary);">Da:</label>
-                                    <input type="date" id="date-start" style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 6px;">
+                                    <input type="date" id="date-start"
+                                        style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 6px;">
                                     <label style="font-size: 0.8rem; color: var(--text-secondary);">A:</label>
-                                    <input type="date" id="date-end" style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 6px;">
-                                    <button id="apply-custom-date" class="btn-primary" style="margin-top: 0.5rem; width: 100%; justify-content: center;">Applica</button>
+                                    <input type="date" id="date-end"
+                                        style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 6px;">
+                                    <button id="apply-custom-date" class="btn-primary"
+                                        style="margin-top: 0.5rem; width: 100%; justify-content: center;">Applica</button>
                                 </div>
                             </div>
                         </div>
@@ -191,20 +198,24 @@
                 <div class="glass" style="padding: 2rem; margin-bottom: 1.5rem;">
                     <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-bell"></i> Notifiche</h2>
                     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
                             <div>
                                 <h4 style="margin-bottom: 0.25rem;">Suono Notifica</h4>
-                                <p style="color: #94a3b8; font-size: 0.875rem;">Riproduci un suono quando arriva una nuova vendita</p>
+                                <p style="color: #94a3b8; font-size: 0.875rem;">Riproduci un suono quando arriva una
+                                    nuova vendita</p>
                             </div>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="sound-toggle" checked>
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
                             <div>
                                 <h4 style="margin-bottom: 0.25rem;">Notifiche Browser</h4>
-                                <p style="color: #94a3b8; font-size: 0.875rem;">Mostra notifiche desktop quando la dashboard non è in primo piano</p>
+                                <p style="color: #94a3b8; font-size: 0.875rem;">Mostra notifiche desktop quando la
+                                    dashboard non è in primo piano</p>
                             </div>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="notification-toggle" checked>
@@ -224,7 +235,8 @@
             <!-- Platforms View -->
             <div id="platforms-view" class="view">
                 <div class="glass" style="padding: 2rem; text-align: center;">
-                    <i class="fa-solid fa-layer-group" style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
+                    <i class="fa-solid fa-layer-group"
+                        style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
                     <h2>Piattaforme</h2>
                     <p style="color: #94a3b8;">Sezione in sviluppo</p>
                 </div>
@@ -233,7 +245,8 @@
             <!-- History View -->
             <div id="history-view" class="view">
                 <div class="glass" style="padding: 2rem; text-align: center;">
-                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
+                    <i class="fa-solid fa-clock-rotate-left"
+                        style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
                     <h2>Storico Vendite</h2>
                     <p style="color: #94a3b8;">Sezione in sviluppo</p>
                 </div>
