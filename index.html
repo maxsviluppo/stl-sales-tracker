@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="mobile-menu.css">
 </head>
 
 <body>
@@ -54,6 +55,9 @@
 
         <main class="main-content">
             <header class="top-bar">
+                <button class="mobile-menu-toggle" id="mobile-menu-btn" aria-label="Toggle menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
                 <div class="page-title">
                     <h1>Dashboard</h1>
                     <p class="subtitle">Panoramica vendite in tempo reale</p>
@@ -197,51 +201,85 @@
                                 <input type="checkbox" id="notification-toggle" checked>
                                 <span class="toggle-slider"></span>
                             </label>
-                            <div class="modal-content glass">
-                                <div class="modal-header">
-                                    <h2><i class="fa-solid fa-cart-plus"></i> Nuova Vendita</h2>
-                                    <button class="modal-close" id="close-modal">&times;</button>
-                                </div>
-                                <form id="sale-form">
-                                    <div class="form-group">
-                                        <label for="platform-select">Piattaforma</label>
-                                        <select id="platform-select" required>
-                                            <option value="">Seleziona piattaforma...</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="product-name">Nome Prodotto</label>
-                                        <input type="text" id="product-name" placeholder="es. Dragon Skull STL"
-                                            required>
-                                    </div>
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="amount">Importo</label>
-                                            <input type="number" id="amount" step="0.01" min="0" placeholder="0.00"
-                                                required>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="currency">Valuta</label>
-                                            <select id="currency">
-                                                <option value="EUR">EUR (€)</option>
-                                                <option value="USD">USD ($)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="modal-actions">
-                                        <button type="button" class="btn-secondary" id="cancel-btn">Annulla</button>
-                                        <button type="submit" class="btn-success">
-                                            <i class="fa-solid fa-check"></i>
-                                            Salva Vendita
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
                         </div>
+                    </div>
+                </div>
+                <div class="glass" style="padding: 2rem;">
+                    <h2 style="margin-bottom: 1rem;"><i class="fa-solid fa-info-circle"></i> Informazioni</h2>
+                    <p style="color: #94a3b8;">Versione: 1.0.0</p>
+                    <p style="color: #94a3b8; margin-top: 1rem;">Piattaforme: Cults3D, Pixup, CGTrader, 3DExport</p>
+                    <p style="color: #94a3b8; margin-top: 1rem;">Controllo automatico ogni 2 ore</p>
+                </div>
+            </div>
 
-                        <audio id="cash-sound" src="cash-register.mp3" preload="auto"></audio>
-                        <script src="supabase-config.js"></script>
-                        <script src="script.js"></script>
+            <!-- Platforms View -->
+            <div id="platforms-view" class="view">
+                <div class="glass" style="padding: 2rem; text-align: center;">
+                    <i class="fa-solid fa-layer-group"
+                        style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
+                    <h2>Piattaforme</h2>
+                    <p style="color: #94a3b8;">Sezione in sviluppo</p>
+                </div>
+            </div>
+
+            <!-- History View -->
+            <div id="history-view" class="view">
+                <div class="glass" style="padding: 2rem; text-align: center;">
+                    <i class="fa-solid fa-clock-rotate-left"
+                        style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
+                    <h2>Storico Vendite</h2>
+                    <p style="color: #94a3b8;">Sezione in sviluppo</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="sale-modal" class="modal">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-cart-plus"></i> Nuova Vendita</h2>
+                <button class="modal-close" id="close-modal">&times;</button>
+            </div>
+            <form id="sale-form">
+                <div class="form-group">
+                    <label for="platform-select">Piattaforma</label>
+                    <select id="platform-select" required>
+                        <option value="">Seleziona piattaforma...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="product-name">Nome Prodotto</label>
+                    <input type="text" id="product-name" placeholder="es. Dragon Skull STL" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="amount">Importo</label>
+                        <input type="number" id="amount" step="0.01" min="0" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="currency">Valuta</label>
+                        <select id="currency">
+                            <option value="EUR">EUR (€)</option>
+                            <option value="USD">USD ($)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancel-btn">Annulla</button>
+                    <button type="submit" class="btn-success">
+                        <i class="fa-solid fa-check"></i>
+                        Salva Vendita
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <audio id="cash-sound" src="cash-register.mp3" preload="auto"></audio>
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+    <script src="mobile-menu.js"></script>
 </body>
 
 </html>
