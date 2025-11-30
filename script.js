@@ -11,6 +11,7 @@ const CONFIG = {
 let lastSalesCount = 0;
 let isFirstLoad = true;
 let selectedPlatformId = null; // null = all platforms
+let currentSalesLimit = 5; // Default limit
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('STL Sales Tracker Initialized');
@@ -18,69 +19,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize UI
     setupNavigation();
     setupSound();
-    setupModal();
     requestNotificationPermission();
 
     // Load Data
     await loadDashboardData();
-
-
-    // Setup Check Email Button
-    const checkEmailBtn = document.getElementById('check-email-btn');
-    if (checkEmailBtn) {
-        checkEmailBtn.addEventListener('click', async () => {
-            const icon = checkEmailBtn.querySelector('i');
-            const span = checkEmailBtn.querySelector('span');
-            const originalText = span ? span.textContent : '';
-
-            // Disable button and show loading
-            checkEmailBtn.disabled = true;
-            icon.classList.remove('fa-envelope');
-            icon.classList.add('fa-spinner', 'fa-spin');
-            if (span) span.textContent = 'Controllo...';
-
-            try {
-                // Call gmail-checker Edge Function
-                const response = await fetch('https://zhgpccmzgyertwnvyiaz.supabase.co/functions/v1/gmail-checker', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${supabase.supabaseKey}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('Email check result:', result);
-
-                    // Reload dashboard data
-                    await loadDashboardData();
-
-                    // Show success notification
-                    showNotification(`✅ Email controllate! ${result.newSales || 0} nuove vendite trovate.`);
-
-                    // Play sound if new sales found
-                    if (result.newSales > 0 && CONFIG.notificationSound) {
-                        playCashSound();
-                    }
-                } else {
-                    throw new Error('Errore nel controllo email');
-                }
-            } catch (error) {
-                console.error('Error checking emails:', error);
-                showNotification('❌ Errore nel controllo email. Riprova più tardi.');
-            } finally {
-                // Re-enable button
-                checkEmailBtn.disabled = false;
-                icon.classList.remove('fa-spinner', 'fa-spin');
-                icon.classList.add('fa-envelope');
-                if (span) span.textContent = originalText;
-            }
-        });
-    }
-
-    // Start auto-refresh every 2 hours (matches email check interval)
-    startAutoRefresh();
 
     // Setup Sales Limit Selector
     const salesLimitSelect = document.getElementById('sales-limit-select');
@@ -90,6 +32,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             await loadRecentSales(currentSalesLimit);
         });
     }
+
+    // Start auto-refresh every 2 hours (matches email check interval)
+    startAutoRefresh();
 
     // Setup Settings Toggles
     const soundToggle = document.getElementById('sound-toggle');
@@ -381,20 +326,13 @@ async function loadDailyTotals() {
 }
 
 
-let currentSalesLimit = 5;
-const MAX_SALES_LIMIT = 20;
-
 async function loadRecentSales(limit = currentSalesLimit) {
-    const today = new Date().toISOString().split('T')[0];
-
     const { data, error } = await supabase
         .from('sales')
         .select(`
             *,
             platforms (name)
         `)
-        .gte('sale_date', today + 'T00:00:00')
-        .lte('sale_date', today + 'T23:59:59')
         .order('sale_date', { ascending: false })
         .limit(limit);
 
@@ -409,21 +347,13 @@ async function loadRecentSales(limit = currentSalesLimit) {
     tbody.innerHTML = '';
 
     if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">Nessuna vendita oggi</td></tr>';
-        hideShowMoreButton();
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">Nessuna vendita recente</td></tr>';
         return;
     }
 
     data.forEach(sale => {
-        const date = new Date(sale.sale_date);
-        const formattedDate = date.toLocaleDateString('it-IT', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-        const formattedTime = date.toLocaleTimeString('it-IT', {
-            hour: '2-digit',
-            minute: '2-digit'
+        const date = new Date(sale.sale_date).toLocaleDateString('it-IT', {
+            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
         });
 
         const row = `
@@ -434,8 +364,17 @@ async function loadRecentSales(limit = currentSalesLimit) {
                 </div>
             </td>
             <td>${sale.product_name}</td>
-            <td>${formattedDate} ${formattedTime}</td>
+            <td>${date}</td>
             <td style="font-weight:bold; color:#10b981;">€${sale.amount.toFixed(2)}</td>
+            <td><span class="status-badge status-completed">Completato</span></td>
+        </tr>
+    `;
+        tbody.innerHTML += row;
+    });
+}
+
+async function loadPlatformBreakdown() {
+    const today = new Date().toISOString().split('T')[0];
 
     const { data, error } = await supabase
         .from('daily_sales_by_platform')
@@ -453,7 +392,7 @@ async function loadRecentSales(limit = currentSalesLimit) {
 
     data.forEach(item => {
         const el = `
-            < div class="platform-item" >
+            <div class="platform-item">
                 <div class="platform-info">
                     <div class="platform-logo">${item.platform_name.substring(0, 2).toUpperCase()}</div>
                     <div>
@@ -462,8 +401,8 @@ async function loadRecentSales(limit = currentSalesLimit) {
                     </div>
                 </div>
                 <div style="font-weight:bold;">€${item.total_amount.toFixed(2)}</div>
-            </div >
-            `;
+            </div>
+        `;
         container.innerHTML += el;
     });
 }
@@ -759,14 +698,14 @@ function showNotification(message) {
         position: fixed;
         top: 20px;
         right: 20px;
-        background: linear - gradient(135deg, #10b981 0 %, #059669 100 %);
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
         padding: 1rem 1.5rem;
-        border - radius: 12px;
-        box - shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
-        z - index: 10000;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
+        z-index: 10000;
         animation: slideIn 0.3s ease;
-        `;
+    `;
     notification.textContent = message;
     document.body.appendChild(notification);
 
@@ -774,98 +713,4 @@ function showNotification(message) {
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
-}
-
-// --- Modal Setup ---
-function setupModal() {
-    const modal = document.getElementById('sale-modal');
-    const addBtn = document.getElementById('add-sale-btn');
-    const closeBtn = document.getElementById('close-modal');
-    const cancelBtn = document.getElementById('cancel-btn');
-    const form = document.getElementById('sale-form');
-
-    // Open modal
-    if (addBtn) {
-        addBtn.addEventListener('click', async () => {
-            modal.style.display = 'flex';
-            await populatePlatformSelect();
-        });
-    }
-
-    // Close modal
-    const closeModal = () => {
-        modal.style.display = 'none';
-        form.reset();
-    };
-
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-
-    // Close on outside click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
-
-    // Form submit
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await saveSale();
-            closeModal();
-        });
-    }
-}
-
-async function populatePlatformSelect() {
-    const select = document.getElementById('platform-select');
-    if (!select) return;
-
-    const { data: platforms } = await supabase.from('platforms').select('*').order('name');
-
-    // Clear existing options except first
-    select.innerHTML = '<option value="">Seleziona piattaforma...</option>';
-
-    if (platforms) {
-        platforms.forEach(p => {
-            const option = document.createElement('option');
-            option.value = p.id;
-            option.textContent = p.name;
-            select.appendChild(option);
-        });
-    }
-}
-
-async function saveSale() {
-    const platformId = document.getElementById('platform-select').value;
-    const productName = document.getElementById('product-name').value;
-    const amount = parseFloat(document.getElementById('amount').value);
-    const currency = document.getElementById('currency').value;
-
-    if (!platformId || !productName || !amount) {
-        alert('Compila tutti i campi obbligatori');
-        return;
-    }
-
-    const { data, error } = await supabase.from('sales').insert([{
-        platform_id: platformId,
-        product_name: productName,
-        amount: amount,
-        currency: currency,
-        sale_date: new Date().toISOString()
-    }]).select();
-
-    if (error) {
-        console.error('Error saving sale:', error);
-        showNotification('❌ Errore nel salvare la vendita');
-        return;
-    }
-
-    // Reload dashboard
-    await loadDashboardData();
-
-    // Play sound
-    if (CONFIG.notificationSound) playCashSound();
-
-    // Show success message
-    showNotification('Vendita salvata con successo! 💰');
 }
