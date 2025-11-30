@@ -196,6 +196,69 @@ async function loadDashboardData() {
     }
 }
 
+async function loadDailyTotals() {
+    const today = new Date().toISOString().split('T')[0];
+    const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    const firstDayOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+
+    let query = supabase.from('sales').select('amount, sale_date');
+
+    // Apply platform filter if selected
+    if (selectedPlatformId) {
+        query = query.eq('platform_id', selectedPlatformId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error('Error loading totals:', error);
+        return;
+    }
+
+    // Calculate totals
+    let todayCount = 0;
+    let todayAmount = 0;
+    let monthAmount = 0;
+    let yearAmount = 0;
+
+    data.forEach(sale => {
+        const saleDate = sale.sale_date.split('T')[0];
+
+        // Today
+        if (saleDate === today) {
+            todayCount++;
+            todayAmount += sale.amount;
+        }
+
+        // This Month
+        if (saleDate >= firstDayOfMonth) {
+            monthAmount += sale.amount;
+        }
+
+        // This Year
+        if (saleDate >= firstDayOfYear) {
+            yearAmount += sale.amount;
+        }
+    });
+
+    // Update UI with animation
+    animateValue('today-count', 0, todayCount, 1000);
+    animateValue('today-amount', 0, todayAmount, 1000, true);
+    animateValue('month-amount', 0, monthAmount, 1000, true);
+    animateValue('year-amount', 0, yearAmount, 1000, true);
+
+    // Check for new sales (notification logic)
+    if (!isFirstLoad && todayCount > lastSalesCount) {
+        const diff = todayCount - lastSalesCount;
+        if (CONFIG.notificationSound) playCashSound();
+        if (CONFIG.enablePushNotifications) showNotification('Nuova Vendita!', `Hai fatto ${diff} nuove vendite oggi!`);
+    }
+
+    lastSalesCount = todayCount;
+    isFirstLoad = false;
+}
+
+
 async function loadRecentSales() {
     const { data, error } = await supabase
         .from('sales')
