@@ -32,21 +32,27 @@
     /* Hide sidebar by default on mobile */
     .sidebar {
         position: fixed !important;
-        left: -280px !important;
-        top: 0;
-        height: 100vh;
+        left: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
         width: 280px !important;
-        z-index: 9999 !important;
-        transition: left 0.3s ease !important;
+        z-index: 10000 !important;
+        /* Highest z-index */
+        transform: translateX(-100%) !important;
+        /* Use transform for better performance */
+        transition: transform 0.3s ease !important;
         display: flex !important;
-        flex-direction: column;
-        background: var(--bg-sidebar);
+        flex-direction: column !important;
+        background-color: #020617 !important;
+        /* Solid dark background */
+        padding-top: 1rem !important;
         box-shadow: none;
     }
 
     /* Show sidebar when active */
     .sidebar.mobile-active {
-        left: 0 !important;
+        transform: translateX(0) !important;
         box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5) !important;
     }
 
