@@ -26,6 +26,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => icon.classList.remove('fa-spin'), 1000);
     });
 
+    // Setup Check Email Button
+    const checkEmailBtn = document.getElementById('check-email-btn');
+    if (checkEmailBtn) {
+        checkEmailBtn.addEventListener('click', async () => {
+            const icon = checkEmailBtn.querySelector('i');
+            const span = checkEmailBtn.querySelector('span');
+            const originalText = span ? span.textContent : '';
+
+            // Disable button and show loading
+            checkEmailBtn.disabled = true;
+            icon.classList.remove('fa-envelope');
+            icon.classList.add('fa-spinner', 'fa-spin');
+            if (span) span.textContent = 'Controllo...';
+
+            try {
+                // Call gmail-checker Edge Function
+                const response = await fetch('https://zhgpccmzgyertwnvyiaz.supabase.co/functions/v1/gmail-checker', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${supabase.supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Email check result:', result);
+
+                    // Reload dashboard data
+                    await loadDashboardData();
+
+                    // Show success notification
+                    showNotification(`✅ Email controllate! ${result.newSales || 0} nuove vendite trovate.`);
+
+                    // Play sound if new sales found
+                    if (result.newSales > 0 && CONFIG.notificationSound) {
+                        playCashSound();
+                    }
+                } else {
+                    throw new Error('Errore nel controllo email');
+                }
+            } catch (error) {
+                console.error('Error checking emails:', error);
+                showNotification('❌ Errore nel controllo email. Riprova più tardi.');
+            } finally {
+                // Re-enable button
+                checkEmailBtn.disabled = false;
+                icon.classList.remove('fa-spinner', 'fa-spin');
+                icon.classList.add('fa-envelope');
+                if (span) span.textContent = originalText;
+            }
+        });
+    }
+
     // Start auto-refresh every 2 hours (matches email check interval)
     startAutoRefresh();
 
