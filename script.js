@@ -16,15 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load Data
     await loadDashboardData();
 
-    // Setup Refresh Button
-    document.getElementById('refresh-btn').addEventListener('click', async () => {
-        const btn = document.getElementById('refresh-btn');
-        const icon = btn.querySelector('i');
-
-        icon.classList.add('fa-spin');
-        await loadDashboardData();
-        setTimeout(() => icon.classList.remove('fa-spin'), 1000);
-    });
 
     // Setup Check Email Button
     const checkEmailBtn = document.getElementById('check-email-btn');
@@ -82,6 +73,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Start auto-refresh every 2 hours (matches email check interval)
     startAutoRefresh();
+
+    // Setup Sales Limit Selector
+    const salesLimitSelect = document.getElementById('sales-limit-select');
+    if (salesLimitSelect) {
+        salesLimitSelect.addEventListener('change', async (e) => {
+            currentSalesLimit = parseInt(e.target.value);
+            await loadRecentSales(currentSalesLimit);
+        });
+    }
 
     // Setup Settings Toggles
     const soundToggle = document.getElementById('sound-toggle');
@@ -428,58 +428,6 @@ async function loadRecentSales(limit = currentSalesLimit) {
             <td>${sale.product_name}</td>
             <td>${formattedDate} ${formattedTime}</td>
             <td style="font-weight:bold; color:#10b981;">€${sale.amount.toFixed(2)}</td>
-            <td><span class="status-badge status-completed">Completato</span></td>
-        </tr>
-    `;
-        tbody.innerHTML += row;
-    });
-
-    // Show/hide "Show More" button
-    updateShowMoreButton(data.length, limit);
-}
-
-function updateShowMoreButton(currentCount, currentLimit) {
-    let showMoreBtn = document.getElementById('show-more-sales-btn');
-
-    if (!showMoreBtn) {
-        // Create button if it doesn't exist
-        const sectionHeader = document.querySelector('.recent-sales .section-header');
-        if (sectionHeader) {
-            showMoreBtn = document.createElement('button');
-            showMoreBtn.id = 'show-more-sales-btn';
-            showMoreBtn.className = 'btn-secondary';
-            showMoreBtn.style.fontSize = '0.9rem';
-            showMoreBtn.style.padding = '0.5rem 1rem';
-            showMoreBtn.innerHTML = '<i class="fa-solid fa-chevron-down"></i> Mostra Altro';
-            showMoreBtn.addEventListener('click', async () => {
-                currentSalesLimit = Math.min(currentSalesLimit + 5, MAX_SALES_LIMIT);
-                await loadRecentSales(currentSalesLimit);
-            });
-            sectionHeader.appendChild(showMoreBtn);
-        }
-    }
-
-    // Show button only if there might be more sales and we haven't reached the limit
-    if (showMoreBtn) {
-        if (currentCount >= currentLimit && currentLimit < MAX_SALES_LIMIT) {
-            showMoreBtn.style.display = 'flex';
-            showMoreBtn.innerHTML = `<i class="fa-solid fa-chevron-down"></i> Mostra Altro (${Math.min(currentLimit + 5, MAX_SALES_LIMIT)} max)`;
-        } else {
-            showMoreBtn.style.display = 'none';
-        }
-    }
-}
-
-function hideShowMoreButton() {
-    const showMoreBtn = document.getElementById('show-more-sales-btn');
-    if (showMoreBtn) {
-        showMoreBtn.style.display = 'none';
-    }
-}
-
-
-async function loadPlatformBreakdown() {
-    const today = new Date().toISOString().split('T')[0];
 
     const { data, error } = await supabase
         .from('daily_sales_by_platform')
