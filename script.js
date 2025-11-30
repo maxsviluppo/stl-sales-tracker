@@ -373,15 +373,22 @@ async function loadDailyTotals() {
 }
 
 
-async function loadRecentSales() {
+let currentSalesLimit = 5;
+const MAX_SALES_LIMIT = 20;
+
+async function loadRecentSales(limit = currentSalesLimit) {
+    const today = new Date().toISOString().split('T')[0];
+
     const { data, error } = await supabase
         .from('sales')
         .select(`
             *,
             platforms (name)
         `)
+        .gte('sale_date', today + 'T00:00:00')
+        .lte('sale_date', today + 'T23:59:59')
         .order('sale_date', { ascending: false })
-        .limit(5);
+        .limit(limit);
 
     if (error) {
         console.error('Error fetching sales:', error);
@@ -394,13 +401,21 @@ async function loadRecentSales() {
     tbody.innerHTML = '';
 
     if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">Nessuna vendita recente</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">Nessuna vendita oggi</td></tr>';
+        hideShowMoreButton();
         return;
     }
 
     data.forEach(sale => {
-        const date = new Date(sale.sale_date).toLocaleDateString('it-IT', {
-            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+        const date = new Date(sale.sale_date);
+        const formattedDate = date.toLocaleDateString('it-IT', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        const formattedTime = date.toLocaleTimeString('it-IT', {
+            hour: '2-digit',
+            minute: '2-digit'
         });
 
         const row = `
@@ -411,14 +426,57 @@ async function loadRecentSales() {
                 </div>
             </td>
             <td>${sale.product_name}</td>
-            <td>${date}</td>
+            <td>${formattedDate} ${formattedTime}</td>
             <td style="font-weight:bold; color:#10b981;">€${sale.amount.toFixed(2)}</td>
             <td><span class="status-badge status-completed">Completato</span></td>
         </tr>
     `;
         tbody.innerHTML += row;
     });
+
+    // Show/hide "Show More" button
+    updateShowMoreButton(data.length, limit);
 }
+
+function updateShowMoreButton(currentCount, currentLimit) {
+    let showMoreBtn = document.getElementById('show-more-sales-btn');
+
+    if (!showMoreBtn) {
+        // Create button if it doesn't exist
+        const sectionHeader = document.querySelector('.recent-sales .section-header');
+        if (sectionHeader) {
+            showMoreBtn = document.createElement('button');
+            showMoreBtn.id = 'show-more-sales-btn';
+            showMoreBtn.className = 'btn-secondary';
+            showMoreBtn.style.fontSize = '0.9rem';
+            showMoreBtn.style.padding = '0.5rem 1rem';
+            showMoreBtn.innerHTML = '<i class="fa-solid fa-chevron-down"></i> Mostra Altro';
+            showMoreBtn.addEventListener('click', async () => {
+                currentSalesLimit = Math.min(currentSalesLimit + 5, MAX_SALES_LIMIT);
+                await loadRecentSales(currentSalesLimit);
+            });
+            sectionHeader.appendChild(showMoreBtn);
+        }
+    }
+
+    // Show button only if there might be more sales and we haven't reached the limit
+    if (showMoreBtn) {
+        if (currentCount >= currentLimit && currentLimit < MAX_SALES_LIMIT) {
+            showMoreBtn.style.display = 'flex';
+            showMoreBtn.innerHTML = `<i class="fa-solid fa-chevron-down"></i> Mostra Altro (${Math.min(currentLimit + 5, MAX_SALES_LIMIT)} max)`;
+        } else {
+            showMoreBtn.style.display = 'none';
+        }
+    }
+}
+
+function hideShowMoreButton() {
+    const showMoreBtn = document.getElementById('show-more-sales-btn');
+    if (showMoreBtn) {
+        showMoreBtn.style.display = 'none';
+    }
+}
+
 
 async function loadPlatformBreakdown() {
     const today = new Date().toISOString().split('T')[0];
