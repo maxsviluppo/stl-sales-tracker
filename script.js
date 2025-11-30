@@ -398,6 +398,161 @@ async function loadPlatformBreakdown() {
         `;
         container.innerHTML += el;
     });
+}
+
+// --- Chart.js Setup ---
+let salesChart = null;
+
+async function loadChartData(period = '7', startDate = null, endDate = null) {
+    const canvas = document.getElementById('salesChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Calculate Date Range
+    let queryStart, queryEnd;
+    const today = new Date();
+
+    if (period === 'custom' && startDate && endDate) {
+        queryStart = startDate;
+        queryEnd = endDate;
+    } else if (period === 'today') {
+        queryStart = today.toISOString().split('T')[0];
+        queryEnd = queryStart;
+    } else if (period === 'yesterday') {
+        const y = new Date(today);
+        y.setDate(y.getDate() - 1);
+        queryStart = y.toISOString().split('T')[0];
+        queryEnd = queryStart;
+    } else {
+        const days = parseInt(period);
+        const d = new Date(today);
+        d.setDate(d.getDate() - days + 1);
+        queryStart = d.toISOString().split('T')[0];
+        queryEnd = today.toISOString().split('T')[0];
+    }
+
+    // Fetch Data
+    let query = supabase.from('daily_totals')
+        .select('*')
+        .gte('sale_day', queryStart)
+        .lte('sale_day', queryEnd)
+        .order('sale_day', { ascending: true });
+
+    const { data, error } = await query;
+
+    let labels = [];
+    let values = [];
+
+    if (data && data.length > 0) {
+        // Aggregate data by date
+        const aggregated = {};
+
+        data.forEach(d => {
+            const day = d.sale_day;
+            if (!aggregated[day]) {
+                aggregated[day] = 0;
+            }
+            aggregated[day] += d.total_amount;
+        });
+
+        // Fill missing dates for continuous chart
+        if (period !== 'today' && period !== 'yesterday' && period !== 'custom') {
+            const start = new Date(queryStart);
+            const end = new Date(queryEnd);
+            for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
+                if (!aggregated[dateStr]) aggregated[dateStr] = 0;
+            }
+        }
+
+        const sortedDates = Object.keys(aggregated).sort();
+        labels = sortedDates.map(date => new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }));
+        values = sortedDates.map(date => aggregated[date]);
+    } else {
+        // Empty state
+        if (period === 'today') labels = ['Oggi'];
+        else if (period === 'yesterday') labels = ['Ieri'];
+        else labels = ['Nessun dato'];
+        values = [0];
+    }
+
+    if (salesChart) salesChart.destroy();
+
+    // Create Gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+    gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
+    salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Incasso (€)',
+                data: values,
+                borderColor: '#10b981',
+                backgroundColor: gradient,
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#10b981',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 20,
+                    top: 20,
+                    bottom: 10
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleColor: '#f8fafc',
+                    bodyColor: '#f8fafc',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderWidth: 1,
+                    padding: 10,
+                    displayColors: false,
+                    callbacks: {
+                        label: function (context) {
+                            return '€ ' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: {
+                        color: '#94a3b8',
+                        callback: function (value) { return '€' + value; }
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        color: '#94a3b8',
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 7
+                    }
+                }
+            }
+        }
+    });
+}
+
 // --- Utilities ---
 function animateValue(id, start, end, duration, isCurrency = false) {
     const obj = document.getElementById(id);
