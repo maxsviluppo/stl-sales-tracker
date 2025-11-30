@@ -52,7 +52,67 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Setup Platform Filter
     await setupPlatformFilter();
+
+    // Setup Chart Controls
+    setupChartControls();
 });
+
+function setupChartControls() {
+    const periodSelect = document.getElementById('chart-period');
+    const customDateBtn = document.getElementById('custom-date-btn');
+    const datePicker = document.getElementById('date-range-picker');
+    const applyBtn = document.getElementById('apply-custom-date');
+
+    // Period Change
+    if (periodSelect) {
+        periodSelect.addEventListener('change', async (e) => {
+            const value = e.target.value;
+            if (value !== 'custom') {
+                datePicker.style.display = 'none';
+                await loadChartData(value);
+            }
+        });
+    }
+
+    // Toggle Date Picker
+    if (customDateBtn) {
+        customDateBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isVisible = datePicker.style.display === 'flex';
+            datePicker.style.display = isVisible ? 'none' : 'flex';
+        });
+    }
+
+    // Close Date Picker on outside click
+    document.addEventListener('click', (e) => {
+        if (datePicker && datePicker.style.display === 'flex' && !datePicker.contains(e.target) && !customDateBtn.contains(e.target)) {
+            datePicker.style.display = 'none';
+        }
+    });
+
+    // Apply Custom Date
+    if (applyBtn) {
+        applyBtn.addEventListener('click', async () => {
+            const start = document.getElementById('date-start').value;
+            const end = document.getElementById('date-end').value;
+
+            if (start && end) {
+                datePicker.style.display = 'none';
+                // Temporarily add custom option
+                let customOpt = periodSelect.querySelector('option[value="custom"]');
+                if (!customOpt) {
+                    customOpt = document.createElement('option');
+                    customOpt.value = 'custom';
+                    customOpt.textContent = 'Personalizzato';
+                    periodSelect.appendChild(customOpt);
+                }
+                periodSelect.value = 'custom';
+
+                await loadChartData('custom', start, end);
+            }
+        });
+    }
+}
 
 // --- Platform Filter ---
 async function setupPlatformFilter() {
@@ -338,108 +398,6 @@ async function loadPlatformBreakdown() {
         `;
         container.innerHTML += el;
     });
-}
-
-// --- Chart.js Setup ---
-let salesChart = null;
-
-async function loadChartData() {
-    const ctx = document.getElementById('salesChart').getContext('2d');
-
-    // Mock data if no real data exists yet
-    // In production, fetch from Supabase 'daily_totals' view for last 7 days
-
-    const { data } = await supabase
-        .from('daily_totals')
-        .select('*')
-        .order('sale_day', { ascending: true })
-        .limit(7);
-
-    let labels = [];
-    let values = [];
-
-    if (data && data.length > 0) {
-        // Aggregate data by date (summing EUR and USD for trend simplicity)
-        const aggregated = {};
-
-        data.forEach(d => {
-            const day = d.sale_day;
-            if (!aggregated[day]) {
-                aggregated[day] = 0;
-            }
-            aggregated[day] += d.total_amount;
-        });
-
-        // Sort by date
-        const sortedDates = Object.keys(aggregated).sort();
-
-        // Take last 7 days
-        const recentDates = sortedDates.slice(-7);
-
-        labels = recentDates.map(date => new Date(date).toLocaleDateString('it-IT', { weekday: 'short' }));
-        values = recentDates.map(date => aggregated[date]);
-    } else {
-        // Empty state
-        labels = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
-        values = [0, 0, 0, 0, 0, 0, 0];
-    }
-
-    if (salesChart) salesChart.destroy();
-
-    salesChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Incasso (€)',
-                data: values,
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                borderWidth: 3,
-                tension: 0.4,
-                fill: true,
-                pointBackgroundColor: '#10b981',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    titleColor: '#f8fafc',
-                    bodyColor: '#f8fafc',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderWidth: 1,
-                    padding: 10,
-                    displayColors: false,
-                    callbacks: {
-                        label: function (context) {
-                            return '€ ' + context.parsed.y.toFixed(2);
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { color: '#94a3b8' }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#94a3b8' }
-                }
-            }
-        }
-    });
-}
-
 // --- Utilities ---
 function animateValue(id, start, end, duration, isCurrency = false) {
     const obj = document.getElementById(id);

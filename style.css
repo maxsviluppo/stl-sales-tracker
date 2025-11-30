@@ -211,19 +211,6 @@ body {
     width: 45px;
     height: 45px;
     border-radius: 12px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-icon:hover {
-    color: var(--text-primary);
-    border-color: var(--accent-color);
-}
-
-/* Glassmorphism Cards */
-.glass {
-    background: var(--glass-bg);
     backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
