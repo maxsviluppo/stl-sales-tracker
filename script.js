@@ -359,8 +359,25 @@ async function loadChartData() {
     let values = [];
 
     if (data && data.length > 0) {
-        labels = data.map(d => new Date(d.sale_day).toLocaleDateString('it-IT', { weekday: 'short' }));
-        values = data.map(d => d.total_amount);
+        // Aggregate data by date (summing EUR and USD for trend simplicity)
+        const aggregated = {};
+
+        data.forEach(d => {
+            const day = d.sale_day;
+            if (!aggregated[day]) {
+                aggregated[day] = 0;
+            }
+            aggregated[day] += d.total_amount;
+        });
+
+        // Sort by date
+        const sortedDates = Object.keys(aggregated).sort();
+
+        // Take last 7 days
+        const recentDates = sortedDates.slice(-7);
+
+        labels = recentDates.map(date => new Date(date).toLocaleDateString('it-IT', { weekday: 'short' }));
+        values = recentDates.map(date => aggregated[date]);
     } else {
         // Empty state
         labels = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
