@@ -1,33 +1,198 @@
 /* Mobile Responsive Fixes for Chart Section */
 @media (max-width: 768px) {
+
+    /* Main content padding */
+    .main-content {
+        padding: 1rem !important;
+    }
+
+    /* Stats grid - single column with spacing */
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+        margin-bottom: 2rem !important;
+    }
+
+    /* Charts section - more spacing */
     .charts-section {
         grid-template-columns: 1fr !important;
-        gap: 2rem;
+        gap: 3rem !important;
+        margin-bottom: 3rem !important;
     }
 
+    /* Chart container */
+    .chart-container {
+        margin-bottom: 2rem !important;
+    }
+
+    /* Chart header - stack vertically */
     .chart-header {
-        flex-direction: column;
+        flex-direction: column !important;
         align-items: flex-start !important;
-        gap: 1rem;
+        gap: 1rem !important;
+        margin-bottom: 1.5rem !important;
     }
 
+    .chart-header h3 {
+        margin-bottom: 0 !important;
+    }
+
+    /* Chart actions - full width */
     .chart-actions {
-        width: 100%;
+        width: 100% !important;
         justify-content: space-between !important;
+        position: relative !important;
     }
 
+    /* Date picker - position from left on mobile */
     #date-range-picker {
         right: auto !important;
         left: 0 !important;
-        width: calc(100% - 2rem);
-        max-width: 300px;
+        width: calc(100% - 2rem) !important;
+        max-width: 320px !important;
+        top: 3.5rem !important;
     }
 
+    /* Platform breakdown - extra spacing */
     .platform-breakdown {
-        margin-top: 2rem;
+        margin-top: 3rem !important;
+        padding-top: 2rem !important;
     }
 
-    .stats-grid {
-        grid-template-columns: 1fr !important;
+    .platform-breakdown h3 {
+        margin-bottom: 1.5rem !important;
+    }
+
+    /* Recent sales - extra spacing */
+    .recent-sales {
+        margin-top: 3rem !important;
+        padding-top: 2rem !important;
+    }
+
+    /* Top bar adjustments */
+    .top-bar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
+        padding: 1rem !important;
+    }
+
+    .page-title {
+        width: 100% !important;
+    }
+
+    .page-title h1 {
+        font-size: 1.5rem !important;
+    }
+
+    .actions {
+        width: 100% !important;
+        justify-content: space-between !important;
+    }
+
+    .actions button span {
+        display: none !important;
+    }
+
+    .actions button {
+        padding: 0.6rem !important;
+        min-width: 40px !important;
+    }
+
+    /* Mobile menu button */
+    .mobile-menu-toggle {
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* Table responsive */
+    .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        margin-top: 1rem !important;
+    }
+
+    .sales-table {
+        font-size: 0.8rem !important;
+        min-width: 600px !important;
+    }
+
+    .sales-table th,
+    .sales-table td {
+        padding: 0.6rem 0.4rem !important;
+        white-space: nowrap !important;
+    }
+
+    /* Platform items */
+    .platform-item {
+        padding: 0.8rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .platform-logo {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.7rem !important;
+    }
+
+    /* Stat cards */
+    .stat-card {
+        padding: 1.2rem !important;
+    }
+
+    .stat-icon {
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 1.2rem !important;
+    }
+
+    .stat-value {
+        font-size: 1.5rem !important;
+    }
+
+    /* Glass cards */
+    .glass {
+        padding: 1.2rem !important;
+    }
+
+    /* Section spacing */
+    .view>.glass {
+        margin-bottom: 1.5rem !important;
+    }
+
+    /* Chart canvas container */
+    .chart-container canvas {
+        margin-top: 1rem !important;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+    .main-content {
+        padding: 0.75rem !important;
+    }
+
+    .charts-section {
+        gap: 2.5rem !important;
+    }
+
+    .stat-card {
+        flex-direction: column !important;
+        text-align: center !important;
+    }
+
+    .stat-icon {
+        margin-bottom: 0.5rem !important;
+    }
+
+    #date-range-picker {
+        max-width: 280px !important;
+    }
+
+    .page-title h1 {
+        font-size: 1.3rem !important;
+    }
+
+    .subtitle {
+        font-size: 0.8rem !important;
     }
 }
