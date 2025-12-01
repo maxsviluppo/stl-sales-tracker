@@ -299,37 +299,6 @@ h3,
 }
 
 .stat-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 0.3rem;
-}
-
-.stat-trend {
-    font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-}
-
-.stat-trend.positive {
-    color: var(--accent-color);
-}
-
-.stat-trend.neutral {
-    color: var(--text-secondary);
-}
-
-/* Charts Section */
-.charts-section {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.chart-container {
-    height: 400px;
-    position: relative;
     display: flex;
     flex-direction: column;
 }

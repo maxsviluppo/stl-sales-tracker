@@ -281,6 +281,7 @@ async function loadStats() {
             .lt('sale_date', today);
 
         const yesterdayCount = yesterdaySales?.length || 0;
+        const yesterdayAmount = yesterdaySales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
 
         // This month
         const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
@@ -300,11 +301,39 @@ async function loadStats() {
 
         const yearAmount = yearSales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
 
+        // Calculate differences
+        const countDiff = todayCount - yesterdayCount;
+        const amountDiff = todayAmount - yesterdayAmount;
+
         // Update UI
         document.getElementById('today-count').textContent = todayCount;
         document.getElementById('today-amount').textContent = `€${todayAmount.toFixed(2)}`;
         document.getElementById('month-amount').textContent = `€${monthAmount.toFixed(2)}`;
         document.getElementById('year-amount').textContent = `€${yearAmount.toFixed(2)}`;
+
+        // Update trend indicators with differences
+        const countTrendEl = document.querySelector('#today-count').closest('.stat-card').querySelector('.stat-trend');
+        const amountTrendEl = document.querySelector('#today-amount').closest('.stat-card').querySelector('.stat-trend');
+
+        if (countTrendEl) {
+            const isPositive = countDiff >= 0;
+            countTrendEl.className = `stat-trend ${isPositive ? 'positive' : 'negative'}`;
+            countTrendEl.innerHTML = `
+                <i class="fa-solid fa-arrow-${isPositive ? 'up' : 'down'}"></i>
+                <span>${isPositive ? '+' : ''}${countDiff} vs ieri</span>
+            `;
+            countTrendEl.style.color = isPositive ? '#10b981' : '#ef4444';
+        }
+
+        if (amountTrendEl) {
+            const isPositive = amountDiff >= 0;
+            amountTrendEl.className = `stat-trend ${isPositive ? 'positive' : 'negative'}`;
+            amountTrendEl.innerHTML = `
+                <i class="fa-solid fa-arrow-${isPositive ? 'up' : 'down'}"></i>
+                <span>${isPositive ? '+' : ''}€${amountDiff.toFixed(2)} vs ieri</span>
+            `;
+            amountTrendEl.style.color = isPositive ? '#10b981' : '#ef4444';
+        }
 
         // Check for new sales
         if (!isFirstLoad && todayCount > lastSalesCount) {
