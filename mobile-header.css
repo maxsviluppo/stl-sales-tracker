@@ -1,11 +1,11 @@
 /* Mobile Header Layout with App Name */
 @media (max-width: 768px) {
 
-    /* Mobile Header - 3 Row Grid Layout */
+    /* Mobile Header - 2 Row Grid Layout */
     .top-bar {
         display: grid !important;
         grid-template-columns: auto 1fr auto !important;
-        grid-template-rows: auto auto auto !important;
+        grid-template-rows: auto auto !important;
         gap: 0.5rem 1rem !important;
         padding: 1rem !important;
         background: var(--bg-dark) !important;
@@ -20,17 +20,14 @@
         grid-row: 1 !important;
     }
 
-    /* 2. App Name "STL Tracker" (Row 2, Left) */
+    /* 2. App Name "STL Tracker" (Row 2, Left) - GREEN */
     .top-bar::before {
         content: "STL Tracker" !important;
         grid-column: 1 / 2 !important;
         grid-row: 2 !important;
         font-size: 1.5rem !important;
         font-weight: 700 !important;
-        background: linear-gradient(135deg, #94a3b8 0%, #cbd5e1 100%) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        background-clip: text !important;
+        color: #10b981 !important;
     }
 
     /* 3. Actions (Top Right, Row 1) */
@@ -43,20 +40,9 @@
         gap: 0.75rem !important;
     }
 
-    /* 4. Page Title (Row 3, Full Width) */
+    /* 4. Hide Page Title on Mobile */
     .page-title {
-        grid-column: 1 / -1 !important;
-        grid-row: 3 !important;
-    }
-
-    .page-title h1 {
-        font-size: 1.5rem !important;
-        margin-bottom: 0.25rem !important;
-    }
-
-    .page-title .subtitle {
-        font-size: 0.875rem !important;
-        opacity: 0.7 !important;
+        display: none !important;
     }
 }
 
