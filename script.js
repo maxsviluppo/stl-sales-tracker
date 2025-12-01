@@ -261,8 +261,13 @@ async function loadDashboardData() {
 // Load Statistics
 async function loadStats() {
     try {
-        const today = new Date().toISOString().split('T')[0];
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        // Use local date instead of UTC to avoid timezone issues
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+        const yesterdayDate = new Date(now);
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterday = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`;
 
         // Today's stats
         const { data: todaySales } = await supabase
@@ -283,8 +288,8 @@ async function loadStats() {
         const yesterdayCount = yesterdaySales?.length || 0;
         const yesterdayAmount = yesterdaySales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
 
-        // This month
-        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+        // This month - use local date
+        const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
         const { data: monthSales } = await supabase
             .from('sales')
             .select('amount')
@@ -292,8 +297,8 @@ async function loadStats() {
 
         const monthAmount = monthSales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
 
-        // This year
-        const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+        // This year - use local date
+        const yearStart = `${now.getFullYear()}-01-01`;
         const { data: yearSales } = await supabase
             .from('sales')
             .select('amount')
