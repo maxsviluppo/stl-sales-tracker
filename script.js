@@ -6,6 +6,122 @@ let isFirstLoad = true;
 let selectedPlatformId = null; // null = all platforms
 let currentSalesLimit = 5; // Default limit
 
+// Configuration
+const CONFIG = {
+    notificationSound: true,
+    enablePushNotifications: true
+};
+
+// Setup Modal Logic
+async function setupModalLogic() {
+    const modal = document.getElementById('sale-modal');
+    const addBtn = document.getElementById('add-sale-btn');
+    const closeBtn = document.getElementById('close-modal');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const form = document.getElementById('sale-form');
+    const platformSelect = document.getElementById('platform-select');
+
+    // Load platforms into select
+    const { data: platforms } = await supabase
+        .from('platforms')
+        .select('*')
+        .order('name');
+
+    if (platforms && platformSelect) {
+        platforms.forEach(platform => {
+            const option = document.createElement('option');
+            option.value = platform.id;
+            option.textContent = platform.name;
+            platformSelect.appendChild(option);
+        });
+    }
+
+    // Open modal
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            modal.classList.add('active');
+        });
+    }
+
+    // Close modal
+    const closeModal = () => {
+        modal.classList.remove('active');
+        form.reset();
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    // Close on outside click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    // Handle form submission
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                platform_id: document.getElementById('platform-select').value,
+                product_name: document.getElementById('product-name').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                currency: document.getElementById('currency').value,
+                sale_date: new Date().toISOString()
+            };
+
+            try {
+                const { error } = await supabase
+                    .from('sales')
+                    .insert([formData]);
+
+                if (error) throw error;
+
+                showNotification('✅ Vendita aggiunta!', 'La vendita è stata registrata con successo.');
+                closeModal();
+                await loadDashboardData();
+
+                if (CONFIG.notificationSound) {
+                    playCashSound();
+                }
+            } catch (error) {
+                console.error('Error adding sale:', error);
+                showNotification('❌ Errore', 'Impossibile aggiungere la vendita.');
+            }
+        });
+    }
+}
+
+// Show Notification
+function showNotification(title, message) {
+    // Browser notification
+    if (CONFIG.enablePushNotifications && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {
+            body: message,
+            icon: '/favicon.ico'
+        });
+    }
+
+    // Console log as fallback
+    console.log(`${title}: ${message}`);
+}
+
+// Request Notification Permission
+function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+}
+
+// Start Auto Refresh
+function startAutoRefresh() {
+    // Refresh every 2 hours (7200000 ms)
+    setInterval(async () => {
+        console.log('Auto-refreshing dashboard data...');
+        await loadDashboardData();
+    }, 7200000);
+}
+
 // Navigation Setup
 function setupNavigation() {
     const navItems = document.querySelectorAll('.nav-item[data-page]');
@@ -532,12 +648,12 @@ function setupNavigation() {
 
 // --- Sound System ---
 function setupSound() {
-    const soundBtn = document.getElementById('test-sound-btn');
+    // Sound is now triggered by events, no dedicated test button
     const audio = document.getElementById('cash-sound');
-
-    soundBtn.addEventListener('click', () => {
-        playCashSound();
-    });
+    if (audio) {
+        // Preload audio
+        audio.load();
+    }
 }
 
 function playCashSound() {
@@ -545,11 +661,6 @@ function playCashSound() {
     if (audio) {
         audio.currentTime = 0;
         audio.play().catch(e => console.log('Audio play failed (user interaction needed first):', e));
-
-        // Visual feedback
-        const btn = document.getElementById('test-sound-btn');
-        btn.style.color = '#10b981';
-        setTimeout(() => btn.style.color = '', 500);
     }
 }
 
