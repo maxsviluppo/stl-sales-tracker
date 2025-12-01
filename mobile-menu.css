@@ -233,6 +233,12 @@
         grid-template-columns: 1fr !important;
     }
 
+    .chart-container {
+        height: 300px !important;
+        /* Fix height for mobile */
+        min-height: 300px !important;
+    }
+
     /* Table responsive */
     .table-responsive {
         overflow-x: auto;
