@@ -1,10 +1,28 @@
 /* STL Sales Tracker - Premium Dark Theme */
 :root {
-    --bg-dark: #0f172a;
-    --bg-card: #1e293b;
-    --bg-sidebar: #020617;
+    --bg-dark: #000000;
+    /* Pure Black */
+    --bg-card: #111111;
+    /* Very Dark Grey */
+    --bg-sidebar: #050505;
+    /* Almost Black */
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
+    --accent-color: #10b981;
+    --accent-glow: rgba(16, 185, 129, 0.3);
+    --border-color: #333333;
+    --glass-bg: rgba(20, 20, 20, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+
+    --gradient-primary: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --gradient-card: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+    /* Grey Gradient for Titles */
+    --gradient-text: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
+}
+
+* {
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
     font-family: 'Outfit', sans-serif;
 }
@@ -15,10 +33,17 @@ body {
     overflow-x: hidden;
 }
 
-/* Layout */
-.app-container {
-    display: flex;
-    min-height: 100vh;
+/* Apply Gradient to Titles */
+h1,
+h2,
+h3,
+.page-title h1 {
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+    /* Fallback */
 }
 
 /* Sidebar */
