@@ -6,12 +6,6 @@ let isFirstLoad = true;
 let selectedPlatformId = null; // null = all platforms
 let currentSalesLimit = 5; // Default limit
 
-// Configuration
-const CONFIG = {
-    notificationSound: true,
-    enablePushNotifications: true
-};
-
 // Setup Modal Logic
 async function setupModalLogic() {
     const modal = document.getElementById('sale-modal');
@@ -121,6 +115,110 @@ function startAutoRefresh() {
         await loadDashboardData();
     }, 7200000);
 }
+
+// Initialize App
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('STL Sales Tracker Initialized');
+
+    // Initialize UI
+    setupNavigation();
+    setupSound();
+    await setupModalLogic();
+    requestNotificationPermission();
+
+    // Load Data
+    await loadDashboardData();
+
+    // Setup Sales Limit Selector
+    const salesLimitSelect = document.getElementById('sales-limit-select');
+    if (salesLimitSelect) {
+        salesLimitSelect.addEventListener('change', async (e) => {
+            currentSalesLimit = parseInt(e.target.value);
+            await loadRecentSales(currentSalesLimit);
+        });
+    }
+
+    // Setup Check Email Button
+    const checkEmailBtn = document.getElementById('check-email-btn');
+    if (checkEmailBtn) {
+        checkEmailBtn.addEventListener('click', async () => {
+            const icon = checkEmailBtn.querySelector('i');
+            const span = checkEmailBtn.querySelector('span');
+            const originalText = span ? span.textContent : '';
+
+            // Disable button and show loading
+            checkEmailBtn.disabled = true;
+            icon.classList.remove('fa-envelope');
+            icon.classList.add('fa-spinner', 'fa-spin');
+            if (span) span.textContent = 'Controllo...';
+
+            try {
+                // Call gmail-checker Edge Function
+                const response = await fetch('https://zhgpccmzgyertwnvyiaz.supabase.co/functions/v1/gmail-checker', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${CONFIG.supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Email check result:', result);
+
+                    // Reload dashboard data
+                    await loadDashboardData();
+
+                    // Show success notification
+                    showNotification('✅ Email controllate!', `${result.newSales || 0} nuove vendite trovate.`);
+
+                    // Play sound if new sales found
+                    if (result.newSales > 0 && CONFIG.notificationSound) {
+                        playCashSound();
+                    }
+                } else {
+                    throw new Error('Errore nel controllo email');
+                }
+            } catch (error) {
+                console.error('Error checking emails:', error);
+                showNotification('❌ Errore', 'Errore nel controllo email. Riprova più tardi.');
+            } finally {
+                // Re-enable button
+                checkEmailBtn.disabled = false;
+                icon.classList.remove('fa-spinner', 'fa-spin');
+                icon.classList.add('fa-envelope');
+                if (span) span.textContent = originalText;
+            }
+        });
+    }
+
+    // Start auto-refresh every 2 hours
+    startAutoRefresh();
+
+    // Setup Settings Toggles
+    const soundToggle = document.getElementById('sound-toggle');
+    const notificationToggle = document.getElementById('notification-toggle');
+
+    if (soundToggle) {
+        soundToggle.addEventListener('change', (e) => {
+            CONFIG.notificationSound = e.target.checked;
+            console.log('Sound notifications:', CONFIG.notificationSound);
+        });
+    }
+
+    if (notificationToggle) {
+        notificationToggle.addEventListener('change', (e) => {
+            CONFIG.enablePushNotifications = e.target.checked;
+            console.log('Push notifications:', CONFIG.enablePushNotifications);
+            if (e.target.checked) {
+                requestNotificationPermission();
+            }
+        });
+    }
+
+    // Setup Chart Controls
+    setupChartControls();
+});
 
 // Navigation Setup
 function setupNavigation() {
