@@ -10,9 +10,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="mobile-menu.css">
 </head>
 
 <body>
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+
     <div class="app-container">
         <aside class="sidebar">
             <div class="logo">
@@ -33,11 +37,18 @@
 
         <main class="main-content">
             <header class="top-bar">
+                <button class="mobile-menu-toggle" id="mobile-menu-btn" aria-label="Toggle menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
                 <div class="page-title">
                     <h1>📊 Analytics Avanzate</h1>
                     <p class="subtitle">Statistiche dettagliate e confronti tra piattaforme</p>
                 </div>
                 <div class="actions">
+                    <a href="index.html" class="btn-secondary" style="text-decoration: none;">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Dashboard</span>
+                    </a>
                     <button id="refresh-analytics-btn" class="btn-primary">
                         <i class="fa-solid fa-rotate-right"></i>
                         <span>Aggiorna</span>
@@ -158,6 +169,7 @@
     </div>
 
     <script src="supabase-config.js"></script>
+    <script src="mobile-menu.js"></script>
     <script src="analytics-advanced.js"></script>
 </body>
 
