@@ -71,9 +71,9 @@
                     <button id="test-sound-btn" class="btn-icon" title="Test Suono">
                         <i class="fa-solid fa-bell"></i>
                     </button>
-                    <button id="refresh-btn" class="btn-primary">
-                        <i class="fa-solid fa-rotate-right"></i>
-                        <span>Aggiorna</span>
+                    <button id="check-email-btn" class="btn-success" title="Controlla Email">
+                        <i class="fa-solid fa-envelope"></i>
+                        <span>Controlla Email</span>
                     </button>
                 </div>
             </header>
@@ -174,83 +174,78 @@
                 <div class="recent-sales glass">
                     <div class="section-header">
                         <h3>Ultime Vendite</h3>
-                        <a href="#" class="view-all">Vedi tutte</a>
+                        <select id="sales-limit-select"
+                            style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 8px; font-size: 0.9rem;">
+                            <option value="5" selected>5 vendite</option>
+                            <option value="10">10 vendite</option>
+                            <option value="20">20 vendite</option>
+                            <option value="30">30 vendite</option>
+                        </select>
                     </div>
                     <div class="table-responsive">
-                        <table class="sales-table">
-                            <thead>
-                                <tr>
-                                    <th>Piattaforma</th>
-                                    <th>Prodotto</th>
-                                    <th>Data</th>
-                                    <th>Importo</th>
-                                    <th>Stato</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-sales-body"></tbody>
-                        </table>
                     </div>
-                </div>
-            </div>
 
-            <!-- Settings View -->
-            <div id="settings-view" class="view">
-                <div class="glass" style="padding: 2rem; margin-bottom: 1.5rem;">
-                    <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-bell"></i> Notifiche</h2>
-                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
-                            <div>
-                                <h4 style="margin-bottom: 0.25rem;">Suono Notifica</h4>
-                                <p style="color: #94a3b8; font-size: 0.875rem;">Riproduci un suono quando arriva una
-                                    nuova vendita</p>
+                    <!-- Settings View -->
+                    <div id="settings-view" class="view">
+                        <div class="glass" style="padding: 2rem; margin-bottom: 1.5rem;">
+                            <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-bell"></i> Notifiche</h2>
+                            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
+                                    <div>
+                                        <h4 style="margin-bottom: 0.25rem;">Suono Notifica</h4>
+                                        <p style="color: #94a3b8; font-size: 0.875rem;">Riproduci un suono quando arriva
+                                            una
+                                            nuova vendita</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="sound-toggle" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
+                                    <div>
+                                        <h4 style="margin-bottom: 0.25rem;">Notifiche Browser</h4>
+                                        <p style="color: #94a3b8; font-size: 0.875rem;">Mostra notifiche desktop quando
+                                            la
+                                            dashboard non è in primo piano</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="notification-toggle" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
                             </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="sound-toggle" checked>
-                                <span class="toggle-slider"></span>
-                            </label>
                         </div>
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem;">
-                            <div>
-                                <h4 style="margin-bottom: 0.25rem;">Notifiche Browser</h4>
-                                <p style="color: #94a3b8; font-size: 0.875rem;">Mostra notifiche desktop quando la
-                                    dashboard non è in primo piano</p>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="notification-toggle" checked>
-                                <span class="toggle-slider"></span>
-                            </label>
+                        <div class="glass" style="padding: 2rem;">
+                            <h2 style="margin-bottom: 1rem;"><i class="fa-solid fa-info-circle"></i> Informazioni</h2>
+                            <p style="color: #94a3b8;">Versione: 1.0.0</p>
+                            <p style="color: #94a3b8; margin-top: 1rem;">Piattaforme: Cults3D, Pixup, CGTrader, 3DExport
+                            </p>
+                            <p style="color: #94a3b8; margin-top: 1rem;">Controllo automatico ogni 2 ore</p>
                         </div>
                     </div>
-                </div>
-                <div class="glass" style="padding: 2rem;">
-                    <h2 style="margin-bottom: 1rem;"><i class="fa-solid fa-info-circle"></i> Informazioni</h2>
-                    <p style="color: #94a3b8;">Versione: 1.0.0</p>
-                    <p style="color: #94a3b8; margin-top: 1rem;">Piattaforme: Cults3D, Pixup, CGTrader, 3DExport</p>
-                    <p style="color: #94a3b8; margin-top: 1rem;">Controllo automatico ogni 2 ore</p>
-                </div>
-            </div>
 
-            <!-- Platforms View -->
-            <div id="platforms-view" class="view">
-                <div class="glass" style="padding: 2rem; text-align: center;">
-                    <i class="fa-solid fa-layer-group"
-                        style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
-                    <h2>Piattaforme</h2>
-                    <p style="color: #94a3b8;">Sezione in sviluppo</p>
-                </div>
-            </div>
+                    <!-- Platforms View -->
+                    <div id="platforms-view" class="view">
+                        <div class="glass" style="padding: 2rem; text-align: center;">
+                            <i class="fa-solid fa-layer-group"
+                                style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
+                            <h2>Piattaforme</h2>
+                            <p style="color: #94a3b8;">Sezione in sviluppo</p>
+                        </div>
+                    </div>
 
-            <!-- History View -->
-            <div id="history-view" class="view">
-                <div class="glass" style="padding: 2rem; text-align: center;">
-                    <i class="fa-solid fa-clock-rotate-left"
-                        style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
-                    <h2>Storico Vendite</h2>
-                    <p style="color: #94a3b8;">Sezione in sviluppo</p>
-                </div>
-            </div>
+                    <!-- History View -->
+                    <div id="history-view" class="view">
+                        <div class="glass" style="padding: 2rem; text-align: center;">
+                            <i class="fa-solid fa-clock-rotate-left"
+                                style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
+                            <h2>Storico Vendite</h2>
+                            <p style="color: #94a3b8;">Sezione in sviluppo</p>
+                        </div>
+                    </div>
         </main>
     </div>
 

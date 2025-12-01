@@ -396,7 +396,7 @@ async function loadRecentSales(limit = currentSalesLimit) {
     tbody.innerHTML = '';
 
     if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">Nessuna vendita recente</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 2rem;">Nessuna vendita recente</td></tr>';
         return;
     }
 
@@ -415,7 +415,6 @@ async function loadRecentSales(limit = currentSalesLimit) {
             <td>${sale.product_name}</td>
             <td>${date}</td>
             <td style="font-weight:bold; color:#10b981;">€${sale.amount.toFixed(2)}</td>
-            <td><span class="status-badge status-completed">Completato</span></td>
         </tr>
     `;
         tbody.innerHTML += row;
