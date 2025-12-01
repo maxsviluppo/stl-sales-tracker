@@ -313,8 +313,9 @@ async function loadDashboardData() {
 
 async function loadDailyTotals() {
     const today = new Date().toISOString().split('T')[0];
-    const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-    const firstDayOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+    const d = new Date();
+    const firstDayOfMonth = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-01`;
+    const firstDayOfYear = `${d.getFullYear()}-01-01`;
 
     let query = supabase.from('sales').select('amount, sale_date');
 

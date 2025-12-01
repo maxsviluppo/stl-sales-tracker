@@ -1057,3 +1057,11 @@ input:checked+.toggle-slider:before {
     }
 
     ```
+/* View sections */
+.view {
+    display: none;
+}
+
+.view.active {
+    display: block;
+}
