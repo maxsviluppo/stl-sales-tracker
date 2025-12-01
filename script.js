@@ -4,6 +4,7 @@
 let lastSalesCount = 0;
 let isFirstLoad = true;
 let selectedPlatformId = null; // null = all platforms
+let currentSalesLimit = 5; // Default limit
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('STL Sales Tracker Initialized');
@@ -11,20 +12,74 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize UI
     setupNavigation();
     setupSound();
+    await setupModalLogic();
     requestNotificationPermission();
 
     // Load Data
     await loadDashboardData();
 
-    // Setup Refresh Button
-    document.getElementById('refresh-btn').addEventListener('click', async () => {
-        const btn = document.getElementById('refresh-btn');
-        const icon = btn.querySelector('i');
+    // Setup Sales Limit Selector
+    const salesLimitSelect = document.getElementById('sales-limit-select');
+    if (salesLimitSelect) {
+        salesLimitSelect.addEventListener('change', async (e) => {
+            currentSalesLimit = parseInt(e.target.value);
+            await loadRecentSales(currentSalesLimit);
+        });
+    }
 
-        icon.classList.add('fa-spin');
-        await loadDashboardData();
-        setTimeout(() => icon.classList.remove('fa-spin'), 1000);
-    });
+    // Setup Check Email Button
+    const checkEmailBtn = document.getElementById('check-email-btn');
+    if (checkEmailBtn) {
+        checkEmailBtn.addEventListener('click', async () => {
+            const icon = checkEmailBtn.querySelector('i');
+            const span = checkEmailBtn.querySelector('span');
+            const originalText = span ? span.textContent : '';
+
+            // Disable button and show loading
+            checkEmailBtn.disabled = true;
+            icon.classList.remove('fa-envelope');
+            icon.classList.add('fa-spinner', 'fa-spin');
+            if (span) span.textContent = 'Controllo...';
+
+            try {
+                // Call gmail-checker Edge Function
+                const response = await fetch('https://zhgpccmzgyertwnvyiaz.supabase.co/functions/v1/gmail-checker', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${supabase.supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Email check result:', result);
+
+                    // Reload dashboard data
+                    await loadDashboardData();
+
+                    // Show success notification
+                    showNotification('✅ Email controllate!', `${result.newSales || 0} nuove vendite trovate.`);
+
+                    // Play sound if new sales found
+                    if (result.newSales > 0 && CONFIG.notificationSound) {
+                        playCashSound();
+                    }
+                } else {
+                    throw new Error('Errore nel controllo email');
+                }
+            } catch (error) {
+                console.error('Error checking emails:', error);
+                showNotification('❌ Errore', 'Errore nel controllo email. Riprova più tardi.');
+            } finally {
+                // Re-enable button
+                checkEmailBtn.disabled = false;
+                icon.classList.remove('fa-spinner', 'fa-spin');
+                icon.classList.add('fa-envelope');
+                if (span) span.textContent = originalText;
+            }
+        });
+    }
 
     // Start auto-refresh every 2 hours (matches email check interval)
     startAutoRefresh();
@@ -319,7 +374,7 @@ async function loadDailyTotals() {
 }
 
 
-async function loadRecentSales() {
+async function loadRecentSales(limit = currentSalesLimit) {
     const { data, error } = await supabase
         .from('sales')
         .select(`
@@ -327,7 +382,7 @@ async function loadRecentSales() {
             platforms (name)
         `)
         .order('sale_date', { ascending: false })
-        .limit(5);
+        .limit(limit);
 
     if (error) {
         console.error('Error fetching sales:', error);
@@ -579,47 +634,56 @@ function animateValue(id, start, end, duration, isCurrency = false) {
 }
 
 // --- Modal Logic ---
-document.addEventListener('DOMContentLoaded', async () => {
+async function setupModalLogic() {
     const modal = document.getElementById('sale-modal');
     const addBtn = document.getElementById('add-sale-btn');
     const closeBtn = document.getElementById('close-modal');
     const cancelBtn = document.getElementById('cancel-btn');
     const form = document.getElementById('sale-form');
-    const platformSelect = document.getElementById('platform-select');
 
     // Load platforms into select
     await loadPlatforms();
 
     // Open modal
-    addBtn.addEventListener('click', () => {
-        modal.classList.add('active');
-    });
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            modal.classList.add('active');
+        });
+    }
 
     // Close modal
-    closeBtn.addEventListener('click', () => {
-        modal.classList.remove('active');
-        form.reset();
-    });
-
-    cancelBtn.addEventListener('click', () => {
-        modal.classList.remove('active');
-        form.reset();
-    });
-
-    // Close on outside click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
             modal.classList.remove('active');
             form.reset();
-        }
-    });
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            modal.classList.remove('active');
+            form.reset();
+        });
+    }
+
+    // Close on outside click
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+                form.reset();
+            }
+        });
+    }
 
     // Handle form submit
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await saveSale();
-    });
-});
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await saveSale();
+        });
+    }
+}
 
 async function loadPlatforms() {
     const { data, error } = await supabase
