@@ -181,12 +181,12 @@
     }
 
     /* Mobile Buttons - Icon Only, Circular/Rounded */
-    .actions button {
+    .actions button,
+    .actions a {
         padding: 0 !important;
         width: 42px !important;
         height: 42px !important;
         border-radius: 50% !important;
-        /* Circular for modern look */
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -194,16 +194,19 @@
         transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     }
 
-    .actions button:active {
+    .actions button:active,
+    .actions a:active {
         transform: scale(0.9);
     }
 
-    .actions button i {
+    .actions button i,
+    .actions a i {
         font-size: 1.1rem !important;
     }
 
     /* Hide text on mobile */
-    .actions button span {
+    .actions button span,
+    .actions a span {
         display: none !important;
     }
 
@@ -233,10 +236,49 @@
         grid-template-columns: 1fr !important;
     }
 
+    /* Dashboard Chart Container */
     .chart-container {
         height: 300px !important;
-        /* Fix height for mobile */
         min-height: 300px !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+    }
+
+    .chart-container canvas {
+        max-width: 100% !important;
+        height: 300px !important;
+    }
+
+    /* Analytics Page Charts - Fix dimensions and prevent overflow */
+    #comparisonChart {
+        max-width: 100% !important;
+        height: 250px !important;
+    }
+
+    #revenueDistChart,
+    #salesDistChart {
+        max-width: 100% !important;
+        height: 200px !important;
+    }
+
+    /* Analytics Page - Stack distribution charts vertically on mobile */
+    body div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Ensure all chart containers don't overflow */
+    .glass {
+        overflow-x: hidden !important;
+        max-width: 100% !important;
+    }
+
+    .glass>div {
+        overflow-x: hidden !important;
+        max-width: 100% !important;
+    }
+
+    .glass canvas {
+        max-width: 100% !important;
     }
 
     /* Table responsive */
@@ -267,5 +309,15 @@
 
     .stat-value {
         font-size: 1.5rem !important;
+    }
+
+    /* Even smaller charts on very small screens */
+    #comparisonChart {
+        height: 200px !important;
+    }
+
+    #revenueDistChart,
+    #salesDistChart {
+        height: 180px !important;
     }
 }
