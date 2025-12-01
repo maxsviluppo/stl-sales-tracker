@@ -5,19 +5,6 @@
     --bg-sidebar: #020617;
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
-    --accent-color: #10b981;
-    --accent-glow: rgba(16, 185, 129, 0.3);
-    --border-color: #334155;
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
-
-    --gradient-primary: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    --gradient-card: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
-}
-
-* {
-    margin: 0;
-    padding: 0;
     box-sizing: border-box;
     font-family: 'Outfit', sans-serif;
 }
