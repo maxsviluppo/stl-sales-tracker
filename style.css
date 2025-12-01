@@ -1,11 +1,8 @@
 /* STL Sales Tracker - Premium Dark Theme */
 :root {
     --bg-dark: #0E1629;
-    /* Pure Black */
     --bg-card: #111111;
-    /* Very Dark Grey */
     --bg-sidebar: #050505;
-    /* Almost Black */
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     --accent-color: #10b981;
@@ -16,7 +13,6 @@
 
     --gradient-primary: linear-gradient(135deg, #10b981 0%, #059669 100%);
     --gradient-card: linear-gradient(145deg, #1a1a1a, #0a0a0a);
-    /* Grey Gradient for Titles */
     --gradient-text: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
 }
 
@@ -33,7 +29,6 @@ body {
     overflow-x: hidden;
 }
 
-/* Apply Gradient to Titles */
 h1,
 h2,
 h3,
@@ -43,7 +38,6 @@ h3,
     -webkit-text-fill-color: transparent;
     background-clip: text;
     color: transparent;
-    /* Fallback */
 }
 
 /* Sidebar */
@@ -299,6 +293,41 @@ h3,
 }
 
 .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+}
+
+.stat-trend {
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.stat-trend.positive {
+    color: var(--accent-color);
+}
+
+.stat-trend.negative {
+    color: #ef4444;
+}
+
+.stat-trend.neutral {
+    color: var(--text-secondary);
+}
+
+/* Charts Section */
+.charts-section {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.chart-container {
+    height: 400px;
+    position: relative;
     display: flex;
     flex-direction: column;
 }
