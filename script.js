@@ -6,6 +6,108 @@ let isFirstLoad = true;
 let selectedPlatformId = null; // null = all platforms
 let currentSalesLimit = 5; // Default limit
 
+// Navigation Setup
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item[data-page]');
+    const views = document.querySelectorAll('.view');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetPage = item.dataset.page;
+
+            // Update active nav item
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+
+            // Update active view
+            views.forEach(view => view.classList.remove('active'));
+            const targetView = document.getElementById(`${targetPage}-view`);
+            if (targetView) {
+                targetView.classList.add('active');
+            }
+        });
+    });
+}
+
+// Load Dashboard Data
+async function loadDashboardData() {
+    try {
+        await Promise.all([
+            loadStats(),
+            loadChartData('7'),
+            loadTopPlatforms(),
+            loadRecentSales(currentSalesLimit)
+        ]);
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+    }
+}
+
+// Load Statistics
+async function loadStats() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+        // Today's stats
+        const { data: todaySales } = await supabase
+            .from('sales')
+            .select('amount')
+            .gte('sale_date', today);
+
+        const todayCount = todaySales?.length || 0;
+        const todayAmount = todaySales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
+
+        // Yesterday's stats
+        const { data: yesterdaySales } = await supabase
+            .from('sales')
+            .select('amount')
+            .gte('sale_date', yesterday)
+            .lt('sale_date', today);
+
+        const yesterdayCount = yesterdaySales?.length || 0;
+
+        // This month
+        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+        const { data: monthSales } = await supabase
+            .from('sales')
+            .select('amount')
+            .gte('sale_date', monthStart);
+
+        const monthAmount = monthSales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
+
+        // This year
+        const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+        const { data: yearSales } = await supabase
+            .from('sales')
+            .select('amount')
+            .gte('sale_date', yearStart);
+
+        const yearAmount = yearSales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
+
+        // Update UI
+        document.getElementById('today-count').textContent = todayCount;
+        document.getElementById('today-amount').textContent = `€${todayAmount.toFixed(2)}`;
+        document.getElementById('month-amount').textContent = `€${monthAmount.toFixed(2)}`;
+        document.getElementById('year-amount').textContent = `€${yearAmount.toFixed(2)}`;
+
+        // Check for new sales
+        if (!isFirstLoad && todayCount > lastSalesCount) {
+            const newSalesCount = todayCount - lastSalesCount;
+            if (CONFIG.notificationSound) {
+                playCashSound();
+            }
+            showNotification('🎉 Nuova Vendita!', `Hai ricevuto ${newSalesCount} nuova vendita!`);
+        }
+
+        lastSalesCount = todayCount;
+        isFirstLoad = false;
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('STL Sales Tracker Initialized');
 
@@ -166,6 +268,194 @@ function setupChartControls() {
                 await loadChartData('custom', start, end);
             }
         });
+    }
+}
+
+// Load Chart Data
+async function loadChartData(period, customStart, customEnd) {
+    try {
+        let startDate, endDate;
+        const now = new Date();
+
+        if (period === 'custom' && customStart && customEnd) {
+            startDate = customStart;
+            endDate = customEnd;
+        } else if (period === 'today') {
+            startDate = now.toISOString().split('T')[0];
+            endDate = startDate;
+        } else if (period === 'yesterday') {
+            const yesterday = new Date(now - 86400000);
+            startDate = yesterday.toISOString().split('T')[0];
+            endDate = startDate;
+        } else {
+            const days = parseInt(period) || 7;
+            startDate = new Date(now - days * 86400000).toISOString().split('T')[0];
+            endDate = now.toISOString().split('T')[0];
+        }
+
+        const { data: sales } = await supabase
+            .from('sales')
+            .select('sale_date, amount')
+            .gte('sale_date', startDate)
+            .lte('sale_date', endDate)
+            .order('sale_date');
+
+        // Group by date
+        const salesByDate = {};
+        sales?.forEach(sale => {
+            const date = sale.sale_date.split('T')[0];
+            if (!salesByDate[date]) {
+                salesByDate[date] = 0;
+            }
+            salesByDate[date] += sale.amount || 0;
+        });
+
+        // Create chart
+        const canvas = document.getElementById('salesChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+
+        // Destroy existing chart if any
+        if (window.salesChartInstance) {
+            window.salesChartInstance.destroy();
+        }
+
+        const labels = Object.keys(salesByDate);
+        const data = Object.values(salesByDate);
+
+        window.salesChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Vendite (€)',
+                    data: data,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error loading chart:', error);
+    }
+}
+
+// Load Top Platforms
+async function loadTopPlatforms() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+
+        const { data: sales } = await supabase
+            .from('sales')
+            .select('platform_id, amount, platforms(name)')
+            .gte('sale_date', today);
+
+        // Group by platform
+        const platformStats = {};
+        sales?.forEach(sale => {
+            const platformName = sale.platforms?.name || 'Unknown';
+            if (!platformStats[platformName]) {
+                platformStats[platformName] = { count: 0, amount: 0 };
+            }
+            platformStats[platformName].count++;
+            platformStats[platformName].amount += sale.amount || 0;
+        });
+
+        // Sort by amount
+        const sorted = Object.entries(platformStats)
+            .sort((a, b) => b[1].amount - a[1].amount)
+            .slice(0, 5);
+
+        // Update UI
+        const container = document.getElementById('platform-list');
+        if (!container) return;
+
+        container.innerHTML = sorted.map(([name, stats]) => `
+            <div class="platform-item">
+                <div class="platform-info">
+                    <div class="platform-logo">${name.substring(0, 2).toUpperCase()}</div>
+                    <div>
+                        <div style="font-weight: 600;">${name}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">${stats.count} vendite</div>
+                    </div>
+                </div>
+                <div style="font-weight: 700; color: var(--accent-color);">€${stats.amount.toFixed(2)}</div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading top platforms:', error);
+    }
+}
+
+// Load Recent Sales
+async function loadRecentSales(limit = 5) {
+    try {
+        const { data: sales } = await supabase
+            .from('sales')
+            .select('*, platforms(name)')
+            .order('sale_date', { ascending: false })
+            .limit(limit);
+
+        const tbody = document.getElementById('recent-sales-body');
+        if (!tbody) return;
+
+        if (!sales || sales.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nessuna vendita recente</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = sales.map(sale => {
+            const date = new Date(sale.sale_date);
+            const formattedDate = date.toLocaleDateString('it-IT', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return `
+                <tr>
+                    <td>${sale.platforms?.name || 'Unknown'}</td>
+                    <td>${sale.product_name || '-'}</td>
+                    <td>${formattedDate}</td>
+                    <td style="font-weight: 700; color: var(--accent-color);">€${(sale.amount || 0).toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading recent sales:', error);
     }
 }
 
