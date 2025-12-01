@@ -54,3 +54,5 @@ function setupMobileMenu() {
 document.addEventListener('DOMContentLoaded', () => {
     setupMobileMenu();
 });
+
+document.addEventListener('DOMContentLoaded', setupMobileMenu);
