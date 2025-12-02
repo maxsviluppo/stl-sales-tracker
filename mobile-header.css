@@ -20,14 +20,15 @@
         grid-row: 1 !important;
     }
 
-    /* 2. App Name "STL Tracker" (Row 2, Left) - GREEN */
+    /* 2. App Name "STL Tracker" (Row 2, Left) - GREEN & BIGGER */
     .top-bar::before {
         content: "STL Tracker" !important;
         grid-column: 1 / 2 !important;
         grid-row: 2 !important;
-        font-size: 1.5rem !important;
-        font-weight: 700 !important;
+        font-size: 2rem !important;
+        font-weight: 800 !important;
         color: #10b981 !important;
+        letter-spacing: -0.5px !important;
     }
 
     /* 3. Actions (Top Right, Row 1) */
@@ -49,6 +50,6 @@
 /* Smaller app name on very small screens */
 @media (max-width: 480px) {
     .top-bar::before {
-        font-size: 1.25rem !important;
+        font-size: 1.75rem !important;
     }
 }
