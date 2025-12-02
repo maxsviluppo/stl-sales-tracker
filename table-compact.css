@@ -1,0 +1,51 @@
+/* Ottimizzazione Tabella Vendite - Layout Compatto */
+
+/* Colonna Data: più stretta e compatta */
+.sales-table td:nth-child(3) {
+    width: 90px;
+    min-width: 90px;
+    padding: 0.75rem 0.5rem;
+}
+
+/* Colonna Importo: allineata a destra con padding ridotto */
+.sales-table td:nth-child(4) {
+    width: 100px;
+    min-width: 100px;
+    text-align: right;
+    padding-right: 1rem;
+}
+
+/* Data e ora: layout verticale compatto */
+.sales-table td:nth-child(3)>div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    line-height: 1.2;
+}
+
+/* Data: dimensione normale */
+.sales-table td:nth-child(3)>div>span:first-child {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Ora: più piccola e grigia */
+.sales-table td:nth-child(3)>div>span:last-child {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+/* Mobile: mantieni layout compatto */
+@media (max-width: 768px) {
+    .sales-table td:nth-child(3) {
+        width: auto;
+        min-width: auto;
+    }
+
+    .sales-table td:nth-child(4) {
+        width: auto;
+        min-width: auto;
+        text-align: left;
+    }
+}

@@ -200,8 +200,18 @@ async function loadRecentSales(limit = currentSalesLimit) {
     }
 
     data.forEach(sale => {
-        const date = new Date(sale.sale_date).toLocaleDateString('it-IT', {
-            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+        const saleDate = new Date(sale.sale_date);
+
+        // Separa data e ora per layout più compatto
+        const dateOnly = saleDate.toLocaleDateString('it-IT', {
+            day: '2-digit',
+            month: '2-digit',
+            year: '2-digit'
+        });
+
+        const timeOnly = saleDate.toLocaleTimeString('it-IT', {
+            hour: '2-digit',
+            minute: '2-digit'
         });
 
         const row = `
@@ -212,8 +222,13 @@ async function loadRecentSales(limit = currentSalesLimit) {
                 </div>
             </td>
             <td data-label="Prodotto">${sale.product_name || '-'}</td>
-            <td data-label="Data">${date}</td>
-            <td data-label="Importo" style="font-weight:bold; color:#10b981;">€${sale.amount.toFixed(2)}</td>
+            <td data-label="Data" style="white-space: nowrap;">
+                <div style="display: flex; flex-direction: column; gap: 0.15rem; line-height: 1.2;">
+                    <span style="font-size: 0.9rem;">${dateOnly}</span>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">${timeOnly}</span>
+                </div>
+            </td>
+            <td data-label="Importo" style="font-weight:bold; color:#10b981; text-align: right; padding-right: 1rem;">€${sale.amount.toFixed(2)}</td>
         </tr>
         `;
         tbody.innerHTML += row;
@@ -223,34 +238,52 @@ async function loadRecentSales(limit = currentSalesLimit) {
 // --- Top Platforms ---
 async function loadTopPlatforms() {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        // Use same timezone logic as loadStats
+        const now = new Date();
+        const getLocalISODate = (date) => {
+            const offset = date.getTimezoneOffset();
+            const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+            return localDate.toISOString().split('T')[0];
+        };
+        const todayStr = getLocalISODate(now);
 
-        // We use a view or direct query. Assuming 'daily_sales_by_platform' view exists or we aggregate manually
-        // For simplicity and robustness, let's aggregate manually from sales of today
-        const { data: sales } = await supabase
+        // Fetch all sales from today (local midnight) backwards
+        // We fetch a bit more to be safe with timezone
+        const yesterdayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+
+        const { data: allSales } = await supabase
             .from('sales')
-            .select('amount, platforms(name)')
-            .gte('sale_date', today);
+            .select('amount, sale_date, platforms(name)')
+            .gte('sale_date', yesterdayMidnight.toISOString());
 
         const container = document.getElementById('platform-list');
         if (!container) return;
         container.innerHTML = '';
 
-        if (!sales || sales.length === 0) {
+        if (!allSales || allSales.length === 0) {
             container.innerHTML = '<div style="padding:1rem; text-align:center; color:#94a3b8;">Nessuna vendita oggi</div>';
             return;
         }
 
-        // Aggregate
+        // Filter for today (local) and aggregate
         const stats = {};
-        sales.forEach(sale => {
-            const name = sale.platforms?.name || 'Unknown';
-            if (!stats[name]) stats[name] = { count: 0, amount: 0 };
-            stats[name].count++;
-            stats[name].amount += sale.amount;
+        allSales.forEach(sale => {
+            const saleLocalDate = getLocalISODate(new Date(sale.sale_date));
+            if (saleLocalDate === todayStr) {
+                const name = sale.platforms?.name || 'Unknown';
+                if (!stats[name]) stats[name] = { count: 0, amount: 0 };
+                stats[name].count++;
+                stats[name].amount += sale.amount;
+            }
         });
 
-        // Sort
+        // Check if we have any sales today
+        if (Object.keys(stats).length === 0) {
+            container.innerHTML = '<div style="padding:1rem; text-align:center; color:#94a3b8;">Nessuna vendita oggi</div>';
+            return;
+        }
+
+        // Sort by amount
         const sorted = Object.entries(stats).sort((a, b) => b[1].amount - a[1].amount);
 
         sorted.forEach(([name, data]) => {
@@ -280,27 +313,34 @@ async function loadChartData(period = '7', startDate = null, endDate = null) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // Calculate Date Range
+    // Calculate Date Range (using local timezone)
     let queryStart, queryEnd;
-    const today = new Date();
+    const now = new Date();
+
+    const getLocalDateString = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
 
     if (period === 'custom' && startDate && endDate) {
         queryStart = startDate;
         queryEnd = endDate;
     } else if (period === 'today') {
-        queryStart = today.toISOString().split('T')[0];
+        queryStart = getLocalDateString(now);
         queryEnd = queryStart;
     } else if (period === 'yesterday') {
-        const y = new Date(today);
-        y.setDate(y.getDate() - 1);
-        queryStart = y.toISOString().split('T')[0];
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        queryStart = getLocalDateString(yesterday);
         queryEnd = queryStart;
     } else {
         const days = parseInt(period);
-        const d = new Date(today);
+        const d = new Date(now);
         d.setDate(d.getDate() - days + 1);
-        queryStart = d.toISOString().split('T')[0];
-        queryEnd = today.toISOString().split('T')[0];
+        queryStart = getLocalDateString(d);
+        queryEnd = getLocalDateString(now);
     }
 
     // Fetch Data

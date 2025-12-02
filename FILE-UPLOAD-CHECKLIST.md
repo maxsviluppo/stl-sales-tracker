@@ -6,9 +6,11 @@
 **Percorso**: `script.js`
 **Modifiche**: 
 - Riscritto completamente
-- Fix timezone (usa date locali CET)
+- Fix timezone in TUTTE le funzioni (loadStats, loadTopPlatforms, loadChartData)
+- Usa date locali (CET) invece di UTC
 - Rimosse funzioni duplicate
 - Codice pulito e funzionante
+- **IMPORTANTE**: Ora CGTrader appare correttamente nelle Top Platforms!
 
 ### 2. **mobile-header.css** ⭐⭐ NUOVO
 **Percorso**: `mobile-header.css`
@@ -24,10 +26,16 @@
 - Layout a singola riga
 - Prezzo verde e visibile
 
-### 4. **index.html** ⭐
+### 4. **table-compact.css** ⭐⭐ NUOVO
+**Percorso**: `table-compact.css`
+**Modifiche**:
+- Layout compatto per data/ora (incolonnati)
+- Ottimizzazione spazi tabella
+
+### 5. **index.html** ⭐
 **Percorso**: `index.html`
 **Modifiche**:
-- Aggiunti link ai nuovi CSS mobile (righe 15-16)
+- Aggiunti link ai nuovi CSS mobile (righe 15-17)
 
 ### 5. **prevent-duplicate-sales.sql** ⭐ NUOVO
 **Percorso**: `prevent-duplicate-sales.sql`
@@ -77,6 +85,7 @@
    - ✅ script.js
    - ✅ mobile-header.css
    - ✅ mobile-sales.css
+   - ✅ table-compact.css
    - ✅ index.html
    - ✅ prevent-duplicate-sales.sql
    - ✅ .gitignore
