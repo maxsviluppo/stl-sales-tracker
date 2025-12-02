@@ -369,8 +369,8 @@ async function loadChartData(period = '7', startDate = null, endDate = null) {
         data.forEach(s => {
             let day = s.sale_date.split('T')[0];
 
-            // --- FIX: Move CGTrader 6€ sale from Dec 1 to Dec 2 ---
-            if (s.amount === 6 && s.platforms?.name === 'CGTrader' && day === '2024-12-01') {
+            // --- FIX: Move CGTrader ~6€ sale from Dec 1 to Dec 2 ---
+            if (Math.abs(s.amount - 6) < 0.1 && (s.platforms?.name || '').includes('CGTrader') && day === '2024-12-01') {
                 day = '2024-12-02';
             }
             // ------------------------------------------------------
@@ -626,7 +626,13 @@ async function loadPlatformsTableData() {
             if (!stats[platformName]) return; // Skip unknown platforms
 
             const amount = sale.amount || 0;
-            const saleDateStr = getLocalISODate(new Date(sale.sale_date));
+            let saleDateStr = getLocalISODate(new Date(sale.sale_date));
+
+            // --- FIX: Move CGTrader ~6€ sale from Dec 1 to Dec 2 ---
+            if (Math.abs(amount - 6) < 0.1 && platformName.includes('CGTrader') && saleDateStr === '2024-12-01') {
+                saleDateStr = '2024-12-02';
+            }
+            // ------------------------------------------------------
 
             // Total
             stats[platformName].total.c++;
