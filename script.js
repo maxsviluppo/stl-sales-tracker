@@ -1,135 +1,37 @@
 // STL Sales Tracker - Core Logic
+// Note: CONFIG and supabase client are initialized in supabase-config.js
 
-// Global state for tracking sales
+// Global State
 let lastSalesCount = 0;
 let isFirstLoad = true;
-let selectedPlatformId = null; // null = all platforms
-let currentSalesLimit = 5; // Default limit
+let currentSalesLimit = 5;
+let salesChart = null;
 
-// Setup Modal Logic
-async function setupModalLogic() {
-    const modal = document.getElementById('sale-modal');
-    const addBtn = document.getElementById('add-sale-btn');
-    const closeBtn = document.getElementById('close-modal');
-    const cancelBtn = document.getElementById('cancel-btn');
-    const form = document.getElementById('sale-form');
-    const platformSelect = document.getElementById('platform-select');
-
-    // Load platforms into select
-    const { data: platforms } = await supabase
-        .from('platforms')
-        .select('*')
-        .order('name');
-
-    if (platforms && platformSelect) {
-        platforms.forEach(platform => {
-            const option = document.createElement('option');
-            option.value = platform.id;
-            option.textContent = platform.name;
-            platformSelect.appendChild(option);
-        });
-    }
-
-    // Open modal
-    if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            modal.classList.add('active');
-        });
-    }
-
-    // Close modal
-    const closeModal = () => {
-        modal.classList.remove('active');
-        form.reset();
-    };
-
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-
-    // Close on outside click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
-
-    // Handle form submission
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const formData = {
-                platform_id: document.getElementById('platform-select').value,
-                product_name: document.getElementById('product-name').value,
-                amount: parseFloat(document.getElementById('amount').value),
-                currency: document.getElementById('currency').value,
-                sale_date: new Date().toISOString()
-            };
-
-            try {
-                const { error } = await supabase
-                    .from('sales')
-                    .insert([formData]);
-
-                if (error) throw error;
-
-                showNotification('✅ Vendita aggiunta!', 'La vendita è stata registrata con successo.');
-                closeModal();
-                await loadDashboardData();
-
-                if (CONFIG.notificationSound) {
-                    playCashSound();
-                }
-            } catch (error) {
-                console.error('Error adding sale:', error);
-                showNotification('❌ Errore', 'Impossibile aggiungere la vendita.');
-            }
-        });
-    }
-}
-
-// Show Notification
-function showNotification(title, message) {
-    // Browser notification
-    if (CONFIG.enablePushNotifications && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, {
-            body: message,
-            icon: '/favicon.ico'
-        });
-    }
-
-    // Console log as fallback
-    console.log(`${title}: ${message}`);
-}
-
-// Request Notification Permission
-function requestNotificationPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
-}
-
-// Start Auto Refresh
-function startAutoRefresh() {
-    // Refresh every 2 hours (7200000 ms)
-    setInterval(async () => {
-        console.log('Auto-refreshing dashboard data...');
-        await loadDashboardData();
-    }, 7200000);
-}
-
-// Initialize App
+// --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('STL Sales Tracker Initialized');
 
-    // Initialize UI
+    // Initialize UI Components
     setupNavigation();
     setupSound();
+    setupChartControls();
+
+    // Setup Features
     await setupModalLogic();
     requestNotificationPermission();
 
-    // Load Data
+    // Initial Data Load
     await loadDashboardData();
 
-    // Setup Sales Limit Selector
+    // Setup Event Listeners
+    setupEventListeners();
+
+    // Start Auto Refresh
+    startAutoRefresh();
+});
+
+function setupEventListeners() {
+    // Sales Limit Selector
     const salesLimitSelect = document.getElementById('sales-limit-select');
     if (salesLimitSelect) {
         salesLimitSelect.addEventListener('change', async (e) => {
@@ -138,113 +40,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Setup Check Email Button
+    // Check Email Button
     const checkEmailBtn = document.getElementById('check-email-btn');
     if (checkEmailBtn) {
-        checkEmailBtn.addEventListener('click', async () => {
-            const icon = checkEmailBtn.querySelector('i');
-            const span = checkEmailBtn.querySelector('span');
-            const originalText = span ? span.textContent : '';
-
-            // Disable button and show loading
-            checkEmailBtn.disabled = true;
-            icon.classList.remove('fa-envelope');
-            icon.classList.add('fa-spinner', 'fa-spin');
-            if (span) span.textContent = 'Controllo...';
-
-            try {
-                // Call gmail-checker Edge Function
-                const response = await fetch('https://zhgpccmzgyertwnvyiaz.supabase.co/functions/v1/gmail-checker', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${CONFIG.supabaseKey}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('Email check result:', result);
-
-                    // Reload dashboard data
-                    await loadDashboardData();
-
-                    // Show success notification
-                    showNotification('✅ Email controllate!', `${result.newSales || 0} nuove vendite trovate.`);
-
-                    // Play sound if new sales found
-                    if (result.newSales > 0 && CONFIG.notificationSound) {
-                        playCashSound();
-                    }
-                } else {
-                    throw new Error('Errore nel controllo email');
-                }
-            } catch (error) {
-                console.error('Error checking emails:', error);
-                showNotification('❌ Errore', 'Errore nel controllo email. Riprova più tardi.');
-            } finally {
-                // Re-enable button
-                checkEmailBtn.disabled = false;
-                icon.classList.remove('fa-spinner', 'fa-spin');
-                icon.classList.add('fa-envelope');
-                if (span) span.textContent = originalText;
-            }
-        });
+        checkEmailBtn.addEventListener('click', handleCheckEmails);
     }
 
-    // Start auto-refresh every 2 hours
-    startAutoRefresh();
-
-    // Setup Settings Toggles
+    // Settings Toggles
     const soundToggle = document.getElementById('sound-toggle');
-    const notificationToggle = document.getElementById('notification-toggle');
-
     if (soundToggle) {
         soundToggle.addEventListener('change', (e) => {
             CONFIG.notificationSound = e.target.checked;
-            console.log('Sound notifications:', CONFIG.notificationSound);
         });
     }
 
+    const notificationToggle = document.getElementById('notification-toggle');
     if (notificationToggle) {
         notificationToggle.addEventListener('change', (e) => {
             CONFIG.enablePushNotifications = e.target.checked;
-            console.log('Push notifications:', CONFIG.enablePushNotifications);
-            if (e.target.checked) {
-                requestNotificationPermission();
-            }
+            if (e.target.checked) requestNotificationPermission();
         });
     }
-
-    // Setup Chart Controls
-    setupChartControls();
-});
-
-// Navigation Setup
-function setupNavigation() {
-    const navItems = document.querySelectorAll('.nav-item[data-page]');
-    const views = document.querySelectorAll('.view');
-
-    navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetPage = item.dataset.page;
-
-            // Update active nav item
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
-
-            // Update active view
-            views.forEach(view => view.classList.remove('active'));
-            const targetView = document.getElementById(`${targetPage}-view`);
-            if (targetView) {
-                targetView.classList.add('active');
-            }
-        });
-    });
 }
 
-// Load Dashboard Data
+// --- Core Data Loading ---
 async function loadDashboardData() {
     try {
         await Promise.all([
@@ -258,678 +77,110 @@ async function loadDashboardData() {
     }
 }
 
-// Load Statistics
+// --- Statistics (Timezone Fixed) ---
 async function loadStats() {
     try {
-        // Get local midnight timestamps and convert to ISO for DB comparison
-        // This ensures 'Today' starts at 00:00 local time, not UTC
+        // STRICT LOCAL DATE HANDLING
+        // We compare dates as strings YYYY-MM-DD in local time to avoid ANY timezone confusion
         const now = new Date();
 
-        // Today midnight (Local) -> UTC ISO
-        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const today = todayMidnight.toISOString();
+        // Helper to get local YYYY-MM-DD
+        const getLocalISODate = (date) => {
+            const offset = date.getTimezoneOffset();
+            const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+            return localDate.toISOString().split('T')[0];
+        };
 
-        // Yesterday midnight (Local) -> UTC ISO
-        const yesterdayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-        const yesterday = yesterdayMidnight.toISOString();
+        const todayStr = getLocalISODate(now);
 
-        // Tomorrow midnight (Local) -> UTC ISO (for upper bound)
-        const tomorrowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-        const tomorrow = tomorrowMidnight.toISOString();
+        const yesterdayDate = new Date(now);
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayStr = getLocalISODate(yesterdayDate);
 
-        // This month start (Local) -> UTC ISO
-        const monthStartObj = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthStart = monthStartObj.toISOString();
+        const monthStartStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const yearStartStr = `${now.getFullYear()}-01-01`;
 
-        // This year start (Local) -> UTC ISO
-        const yearStartObj = new Date(now.getFullYear(), 0, 1);
-        const yearStart = yearStartObj.toISOString();
-
-        // Today's stats (from today midnight to tomorrow midnight)
-        const { data: todaySales } = await supabase
+        // Fetch ALL sales from start of year (safe for small datasets)
+        const { data: allSales } = await supabase
             .from('sales')
-            .select('amount')
-            .gte('sale_date', today)
-            .lt('sale_date', tomorrow);
+            .select('amount, sale_date')
+            .gte('sale_date', yearStartStr);
 
-        const todayCount = todaySales?.length || 0;
-        const todayAmount = todaySales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
+        if (!allSales) return;
 
-        // Yesterday's stats (from yesterday midnight to today midnight)
-        const { data: yesterdaySales } = await supabase
-            .from('sales')
-            .select('amount')
-            .gte('sale_date', yesterday)
-            .lt('sale_date', today);
+        // Filter in JS using Local Strings
+        const todaySales = allSales.filter(sale => getLocalISODate(new Date(sale.sale_date)) === todayStr);
+        const yesterdaySales = allSales.filter(sale => getLocalISODate(new Date(sale.sale_date)) === yesterdayStr);
+        const monthSales = allSales.filter(sale => getLocalISODate(new Date(sale.sale_date)) >= monthStartStr);
+        const yearSales = allSales; // Since we fetched >= yearStartStr
 
-        const yesterdayCount = yesterdaySales?.length || 0;
-        const yesterdayAmount = yesterdaySales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
+        // Calculate Totals
+        const todayCount = todaySales.length;
+        const todayAmount = todaySales.reduce((sum, sale) => sum + (sale.amount || 0), 0);
 
-        // This month stats
-        const { data: monthSales } = await supabase
-            .from('sales')
-            .select('amount')
-            .gte('sale_date', monthStart);
+        const yesterdayCount = yesterdaySales.length;
+        const yesterdayAmount = yesterdaySales.reduce((sum, sale) => sum + (sale.amount || 0), 0);
 
-        const monthAmount = monthSales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
+        const monthAmount = monthSales.reduce((sum, sale) => sum + (sale.amount || 0), 0);
+        const yearAmount = yearSales.reduce((sum, sale) => sum + (sale.amount || 0), 0);
 
-        // This year stats
-        const { data: yearSales } = await supabase
-            .from('sales')
-            .select('amount')
-            .gte('sale_date', yearStart);
-
-        const yearAmount = yearSales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
-
-        // Calculate differences
+        // Calculate Differences
         const countDiff = todayCount - yesterdayCount;
         const amountDiff = todayAmount - yesterdayAmount;
 
         // Update UI
-        document.getElementById('today-count').textContent = todayCount;
-        document.getElementById('today-amount').textContent = `€${todayAmount.toFixed(2)}`;
-        document.getElementById('month-amount').textContent = `€${monthAmount.toFixed(2)}`;
-        document.getElementById('year-amount').textContent = `€${yearAmount.toFixed(2)}`;
+        updateStatElement('today-count', todayCount);
+        updateStatElement('today-amount', `€${todayAmount.toFixed(2)}`);
+        updateStatElement('month-amount', `€${monthAmount.toFixed(2)}`);
+        updateStatElement('year-amount', `€${yearAmount.toFixed(2)}`);
 
-        // Update trend indicators with differences
-        const countTrendEl = document.querySelector('#today-count').closest('.stat-card').querySelector('.stat-trend');
-        const amountTrendEl = document.querySelector('#today-amount').closest('.stat-card').querySelector('.stat-trend');
+        // Update Trends
+        updateTrend('today-count', countDiff, false);
+        updateTrend('today-amount', amountDiff, true);
 
-        if (countTrendEl) {
-            const isPositive = countDiff >= 0;
-            countTrendEl.className = `stat-trend ${isPositive ? 'positive' : 'negative'}`;
-            countTrendEl.innerHTML = `
-                <i class="fa-solid fa-arrow-${isPositive ? 'up' : 'down'}"></i>
-                <span>${isPositive ? '+' : ''}${countDiff} vs ieri</span>
-            `;
-            countTrendEl.style.color = isPositive ? '#10b981' : '#ef4444';
-        }
-
-        if (amountTrendEl) {
-            const isPositive = amountDiff >= 0;
-            amountTrendEl.className = `stat-trend ${isPositive ? 'positive' : 'negative'}`;
-            amountTrendEl.innerHTML = `
-                <i class="fa-solid fa-arrow-${isPositive ? 'up' : 'down'}"></i>
-                <span>${isPositive ? '+' : ''}€${amountDiff.toFixed(2)} vs ieri</span>
-            `;
-            amountTrendEl.style.color = isPositive ? '#10b981' : '#ef4444';
-        }
-
-        // Check for new sales
+        // New Sales Notification
         if (!isFirstLoad && todayCount > lastSalesCount) {
             const newSalesCount = todayCount - lastSalesCount;
-            if (CONFIG.notificationSound) {
-                playCashSound();
-            }
+            if (CONFIG.notificationSound) playCashSound();
             showNotification('🎉 Nuova Vendita!', `Hai ricevuto ${newSalesCount} nuova vendita!`);
         }
 
         lastSalesCount = todayCount;
         isFirstLoad = false;
+
     } catch (error) {
         console.error('Error loading stats:', error);
     }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('STL Sales Tracker Initialized');
-
-    // Initialize UI
-    setupNavigation();
-    setupSound();
-    await setupModalLogic();
-    requestNotificationPermission();
-
-    // Load Data
-    await loadDashboardData();
-
-    // Setup Sales Limit Selector
-    const salesLimitSelect = document.getElementById('sales-limit-select');
-    if (salesLimitSelect) {
-        salesLimitSelect.addEventListener('change', async (e) => {
-            currentSalesLimit = parseInt(e.target.value);
-            await loadRecentSales(currentSalesLimit);
-        });
-    }
-
-    // Setup Check Email Button
-    const checkEmailBtn = document.getElementById('check-email-btn');
-    if (checkEmailBtn) {
-        checkEmailBtn.addEventListener('click', async () => {
-            const icon = checkEmailBtn.querySelector('i');
-            const span = checkEmailBtn.querySelector('span');
-            const originalText = span ? span.textContent : '';
-
-            // Disable button and show loading
-            checkEmailBtn.disabled = true;
-            icon.classList.remove('fa-envelope');
-            icon.classList.add('fa-spinner', 'fa-spin');
-            if (span) span.textContent = 'Controllo...';
-
-            try {
-                // Call gmail-checker Edge Function
-                const response = await fetch('https://zhgpccmzgyertwnvyiaz.supabase.co/functions/v1/gmail-checker', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${supabase.supabaseKey}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('Email check result:', result);
-
-                    // Reload dashboard data
-                    await loadDashboardData();
-
-                    // Show success notification
-                    showNotification('✅ Email controllate!', `${result.newSales || 0} nuove vendite trovate.`);
-
-                    // Play sound if new sales found
-                    if (result.newSales > 0 && CONFIG.notificationSound) {
-                        playCashSound();
-                    }
-                } else {
-                    throw new Error('Errore nel controllo email');
-                }
-            } catch (error) {
-                console.error('Error checking emails:', error);
-                showNotification('❌ Errore', 'Errore nel controllo email. Riprova più tardi.');
-            } finally {
-                // Re-enable button
-                checkEmailBtn.disabled = false;
-                icon.classList.remove('fa-spinner', 'fa-spin');
-                icon.classList.add('fa-envelope');
-                if (span) span.textContent = originalText;
-            }
-        });
-    }
-
-    // Start auto-refresh every 2 hours (matches email check interval)
-    startAutoRefresh();
-
-    // Setup Settings Toggles
-    const soundToggle = document.getElementById('sound-toggle');
-    const notificationToggle = document.getElementById('notification-toggle');
-
-    if (soundToggle) {
-        soundToggle.addEventListener('change', (e) => {
-            CONFIG.notificationSound = e.target.checked;
-            console.log('Sound notifications:', CONFIG.notificationSound);
-        });
-    }
-
-    if (notificationToggle) {
-        notificationToggle.addEventListener('change', (e) => {
-            CONFIG.enablePushNotifications = e.target.checked;
-            console.log('Push notifications:', CONFIG.enablePushNotifications);
-            if (e.target.checked) {
-                requestNotificationPermission();
-            }
-        });
-    }
-
-    // Setup Platform Filter
-    await setupPlatformFilter();
-
-    // Setup Chart Controls
-    setupChartControls();
-});
-
-function setupChartControls() {
-    const periodSelect = document.getElementById('chart-period');
-    const customDateBtn = document.getElementById('custom-date-btn');
-    const datePicker = document.getElementById('date-range-picker');
-    const applyBtn = document.getElementById('apply-custom-date');
-
-    // Period Change
-    if (periodSelect) {
-        periodSelect.addEventListener('change', async (e) => {
-            const value = e.target.value;
-            if (value !== 'custom') {
-                datePicker.style.display = 'none';
-                await loadChartData(value);
-            }
-        });
-    }
-
-    // Toggle Date Picker
-    if (customDateBtn) {
-        customDateBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const isVisible = datePicker.style.display === 'flex';
-            datePicker.style.display = isVisible ? 'none' : 'flex';
-        });
-    }
-
-    // Close Date Picker on outside click
-    document.addEventListener('click', (e) => {
-        if (datePicker && datePicker.style.display === 'flex' && !datePicker.contains(e.target) && !customDateBtn.contains(e.target)) {
-            datePicker.style.display = 'none';
-        }
-    });
-
-    // Apply Custom Date
-    if (applyBtn) {
-        applyBtn.addEventListener('click', async () => {
-            const start = document.getElementById('date-start').value;
-            const end = document.getElementById('date-end').value;
-
-            if (start && end) {
-                datePicker.style.display = 'none';
-                // Temporarily add custom option
-                let customOpt = periodSelect.querySelector('option[value="custom"]');
-                if (!customOpt) {
-                    customOpt = document.createElement('option');
-                    customOpt.value = 'custom';
-                    customOpt.textContent = 'Personalizzato';
-                    periodSelect.appendChild(customOpt);
-                }
-                periodSelect.value = 'custom';
-
-                await loadChartData('custom', start, end);
-            }
-        });
-    }
+function updateStatElement(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
 }
 
-// Load Chart Data
-async function loadChartData(period, customStart, customEnd) {
-    try {
-        let startDate, endDate;
-        const now = new Date();
+function updateTrend(elementId, diff, isCurrency) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
 
-        if (period === 'custom' && customStart && customEnd) {
-            startDate = customStart;
-            endDate = customEnd;
-        } else if (period === 'today') {
-            startDate = now.toISOString().split('T')[0];
-            endDate = startDate;
-        } else if (period === 'yesterday') {
-            const yesterday = new Date(now - 86400000);
-            startDate = yesterday.toISOString().split('T')[0];
-            endDate = startDate;
-        } else {
-            const days = parseInt(period) || 7;
-            startDate = new Date(now - days * 86400000).toISOString().split('T')[0];
-            endDate = now.toISOString().split('T')[0];
-        }
+    const trendEl = el.closest('.stat-card')?.querySelector('.stat-trend');
+    if (!trendEl) return;
 
-        const { data: sales } = await supabase
-            .from('sales')
-            .select('sale_date, amount')
-            .gte('sale_date', startDate)
-            .lte('sale_date', endDate)
-            .order('sale_date');
+    const isPositive = diff >= 0;
+    const valueStr = isCurrency ? `€${Math.abs(diff).toFixed(2)}` : Math.abs(diff);
 
-        // Group by date
-        const salesByDate = {};
-        sales?.forEach(sale => {
-            const date = sale.sale_date.split('T')[0];
-            if (!salesByDate[date]) {
-                salesByDate[date] = 0;
-            }
-            salesByDate[date] += sale.amount || 0;
-        });
-
-        // Create chart
-        const canvas = document.getElementById('salesChart');
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-
-        // Destroy existing chart if any
-        if (window.salesChartInstance) {
-            window.salesChartInstance.destroy();
-        }
-
-        const labels = Object.keys(salesByDate);
-        const data = Object.values(salesByDate);
-
-        window.salesChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Vendite (€)',
-                    data: data,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        ticks: {
-                            color: '#94a3b8'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        ticks: {
-                            color: '#94a3b8'
-                        }
-                    }
-                }
-            }
-        });
-    } catch (error) {
-        console.error('Error loading chart:', error);
-    }
-}
-
-// Load Top Platforms
-async function loadTopPlatforms() {
-    try {
-        const today = new Date().toISOString().split('T')[0];
-
-        const { data: sales } = await supabase
-            .from('sales')
-            .select('platform_id, amount, platforms(name)')
-            .gte('sale_date', today);
-
-        // Group by platform
-        const platformStats = {};
-        sales?.forEach(sale => {
-            const platformName = sale.platforms?.name || 'Unknown';
-            if (!platformStats[platformName]) {
-                platformStats[platformName] = { count: 0, amount: 0 };
-            }
-            platformStats[platformName].count++;
-            platformStats[platformName].amount += sale.amount || 0;
-        });
-
-        // Sort by amount
-        const sorted = Object.entries(platformStats)
-            .sort((a, b) => b[1].amount - a[1].amount)
-            .slice(0, 5);
-
-        // Update UI
-        const container = document.getElementById('platform-list');
-        if (!container) return;
-
-        container.innerHTML = sorted.map(([name, stats]) => `
-            <div class="platform-item">
-                <div class="platform-info">
-                    <div class="platform-logo">${name.substring(0, 2).toUpperCase()}</div>
-                    <div>
-                        <div style="font-weight: 600;">${name}</div>
-                        <div style="font-size: 0.85rem; color: var(--text-secondary);">${stats.count} vendite</div>
-                    </div>
-                </div>
-                <div style="font-weight: 700; color: var(--accent-color);">€${stats.amount.toFixed(2)}</div>
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error('Error loading top platforms:', error);
-    }
-}
-
-// Load Recent Sales
-async function loadRecentSales(limit = 5) {
-    try {
-        const { data: sales } = await supabase
-            .from('sales')
-            .select('*, platforms(name)')
-            .order('sale_date', { ascending: false })
-            .limit(limit);
-
-        const tbody = document.getElementById('recent-sales-body');
-        if (!tbody) return;
-
-        if (!sales || sales.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nessuna vendita recente</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = sales.map(sale => {
-            const date = new Date(sale.sale_date);
-            const formattedDate = date.toLocaleDateString('it-IT', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-
-            return `
-                <tr>
-                    <td>${sale.platforms?.name || 'Unknown'}</td>
-                    <td>${sale.product_name || '-'}</td>
-                    <td>${formattedDate}</td>
-                    <td style="font-weight: 700; color: var(--accent-color);">€${(sale.amount || 0).toFixed(2)}</td>
-                </tr>
-            `;
-        }).join('');
-    } catch (error) {
-        console.error('Error loading recent sales:', error);
-    }
-}
-
-// --- Platform Filter ---
-async function setupPlatformFilter() {
-    const filterContainer = document.querySelector('.page-title');
-    if (!filterContainer) return;
-
-    // Add filter dropdown after subtitle
-    const filterHTML = `
-        <div style="margin-top: 1rem;">
-            <select id="dashboard-platform-filter" style="padding: 0.6rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 0.9rem; cursor: pointer;">
-                <option value="">📊 Tutte le Piattaforme</option>
-            </select>
-        </div>
+    trendEl.className = `stat-trend ${isPositive ? 'positive' : 'negative'}`;
+    trendEl.innerHTML = `
+        <i class="fa-solid fa-arrow-${isPositive ? 'up' : 'down'}"></i>
+        <span>${isPositive ? '+' : '-'}${valueStr} vs ieri</span>
     `;
-    filterContainer.insertAdjacentHTML('beforeend', filterHTML);
-
-    // Populate filter
-    const { data: platforms } = await supabase.from('platforms').select('*').order('name');
-    const select = document.getElementById('dashboard-platform-filter');
-
-    if (platforms && select) {
-        platforms.forEach(p => {
-            const option = document.createElement('option');
-            option.value = p.id;
-            option.textContent = p.name;
-            select.appendChild(option);
-        });
-
-        select.addEventListener('change', async (e) => {
-            selectedPlatformId = e.target.value || null;
-            await loadDashboardData();
-        });
-    }
+    trendEl.style.color = isPositive ? '#10b981' : '#ef4444';
 }
 
-// --- Navigation ---
-function setupNavigation() {
-    const navItems = document.querySelectorAll('.nav-item');
-    const views = document.querySelectorAll('.view');
-
-    navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            const currentItem = e.currentTarget;
-
-            // Allow navigation for real links (like analytics.html)
-            const href = currentItem.getAttribute('href');
-            if (href && href !== '#' && !href.startsWith('javascript')) {
-                return;
-            }
-
-            e.preventDefault();
-
-            const pageId = currentItem.getAttribute('data-page');
-            if (!pageId) return;
-
-            // Remove active class from all internal nav items
-            navItems.forEach(nav => {
-                if (nav.getAttribute('href') === '#') {
-                    nav.classList.remove('active');
-                }
-            });
-
-            views.forEach(view => view.classList.remove('active'));
-
-            // Add active to current
-            currentItem.classList.add('active');
-            const view = document.getElementById(`${pageId}-view`);
-            if (view) view.classList.add('active');
-        });
-    });
-}
-
-// --- Sound System ---
-function setupSound() {
-    // Sound is now triggered by events, no dedicated test button
-    const audio = document.getElementById('cash-sound');
-    if (audio) {
-        // Preload audio
-        audio.load();
-    }
-}
-
-function playCashSound() {
-    const audio = document.getElementById('cash-sound');
-    if (audio) {
-        audio.currentTime = 0;
-        audio.play().catch(e => console.log('Audio play failed (user interaction needed first):', e));
-    }
-}
-
-// --- Notification System ---
-function requestNotificationPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-            console.log('Notification permission:', permission);
-        });
-    }
-}
-
-function showNotification(title, body) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, {
-            body: body,
-            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">💰</text></svg>',
-            badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">💰</text></svg>'
-        });
-    }
-}
-
-// --- Auto Refresh ---
-function startAutoRefresh() {
-    // Check every 2 hours (7200000 ms) - matches the email check interval
-    setInterval(async () => {
-        console.log('Auto-refreshing dashboard...');
-        await loadDashboardData();
-    }, CONFIG.emailCheckInterval);
-}
-
-// --- Data Loading ---
-async function loadDashboardData() {
-    try {
-        // 1. Load Daily Totals
-        await loadDailyTotals();
-
-        // 2. Load Recent Sales
-        await loadRecentSales();
-
-        // 3. Load Chart Data
-        await loadChartData();
-
-        // 4. Load Platform Breakdown
-        await loadPlatformBreakdown();
-
-    } catch (error) {
-        console.error('Error loading dashboard data:', error);
-    }
-}
-
-async function loadDailyTotals() {
-    const today = new Date().toISOString().split('T')[0];
-    const d = new Date();
-    const firstDayOfMonth = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-01`;
-    const firstDayOfYear = `${d.getFullYear()}-01-01`;
-
-    let query = supabase.from('sales').select('amount, sale_date');
-
-    // Apply platform filter if selected
-    if (selectedPlatformId) {
-        query = query.eq('platform_id', selectedPlatformId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        console.error('Error loading totals:', error);
-        return;
-    }
-
-    // Calculate totals
-    let todayCount = 0;
-    let todayAmount = 0;
-    let monthAmount = 0;
-    let yearAmount = 0;
-
-    data.forEach(sale => {
-        const saleDate = sale.sale_date.split('T')[0];
-
-        // Today
-        if (saleDate === today) {
-            todayCount++;
-            todayAmount += sale.amount;
-        }
-
-        // This Month
-        if (saleDate >= firstDayOfMonth) {
-            monthAmount += sale.amount;
-        }
-
-        // This Year
-        if (saleDate >= firstDayOfYear) {
-            yearAmount += sale.amount;
-        }
-    });
-
-    // Update UI with animation
-    animateValue('today-count', 0, todayCount, 1000);
-    animateValue('today-amount', 0, todayAmount, 1000, true);
-    animateValue('month-amount', 0, monthAmount, 1000, true);
-    animateValue('year-amount', 0, yearAmount, 1000, true);
-
-    // Check for new sales (notification logic)
-    if (!isFirstLoad && todayCount > lastSalesCount) {
-        const diff = todayCount - lastSalesCount;
-        if (CONFIG.notificationSound) playCashSound();
-        if (CONFIG.enablePushNotifications) showNotification('Nuova Vendita!', `Hai fatto ${diff} nuove vendite oggi!`);
-    }
-
-    lastSalesCount = todayCount;
-    isFirstLoad = false;
-}
-
-
+// --- Recent Sales (Mobile Fixed) ---
 async function loadRecentSales(limit = currentSalesLimit) {
     const { data, error } = await supabase
         .from('sales')
-        .select(`
-            *,
-            platforms (name)
-        `)
+        .select('*, platforms(name)')
         .order('sale_date', { ascending: false })
         .limit(limit);
 
@@ -955,57 +206,75 @@ async function loadRecentSales(limit = currentSalesLimit) {
 
         const row = `
         <tr>
-            <td>
+            <td data-label="Piattaforma">
                 <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span style="font-weight:600;">${sale.platforms?.name || 'Unknown'}</span>
                 </div>
             </td>
-            <td>${sale.product_name}</td>
-            <td>${date}</td>
-            <td style="font-weight:bold; color:#10b981;">€${sale.amount.toFixed(2)}</td>
+            <td data-label="Prodotto">${sale.product_name || '-'}</td>
+            <td data-label="Data">${date}</td>
+            <td data-label="Importo" style="font-weight:bold; color:#10b981;">€${sale.amount.toFixed(2)}</td>
         </tr>
-    `;
+        `;
         tbody.innerHTML += row;
     });
 }
 
-async function loadPlatformBreakdown() {
-    const today = new Date().toISOString().split('T')[0];
+// --- Top Platforms ---
+async function loadTopPlatforms() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
 
-    const { data, error } = await supabase
-        .from('daily_sales_by_platform')
-        .select('*')
-        .eq('sale_day', today)
-        .order('total_amount', { ascending: false });
+        // We use a view or direct query. Assuming 'daily_sales_by_platform' view exists or we aggregate manually
+        // For simplicity and robustness, let's aggregate manually from sales of today
+        const { data: sales } = await supabase
+            .from('sales')
+            .select('amount, platforms(name)')
+            .gte('sale_date', today);
 
-    const container = document.getElementById('platform-list');
-    container.innerHTML = '';
+        const container = document.getElementById('platform-list');
+        if (!container) return;
+        container.innerHTML = '';
 
-    if (!data || data.length === 0) {
-        container.innerHTML = '<div style="padding:1rem; text-align:center; color:#94a3b8;">Nessuna vendita oggi</div>';
-        return;
-    }
+        if (!sales || sales.length === 0) {
+            container.innerHTML = '<div style="padding:1rem; text-align:center; color:#94a3b8;">Nessuna vendita oggi</div>';
+            return;
+        }
 
-    data.forEach(item => {
-        const el = `
+        // Aggregate
+        const stats = {};
+        sales.forEach(sale => {
+            const name = sale.platforms?.name || 'Unknown';
+            if (!stats[name]) stats[name] = { count: 0, amount: 0 };
+            stats[name].count++;
+            stats[name].amount += sale.amount;
+        });
+
+        // Sort
+        const sorted = Object.entries(stats).sort((a, b) => b[1].amount - a[1].amount);
+
+        sorted.forEach(([name, data]) => {
+            const el = `
             <div class="platform-item">
                 <div class="platform-info">
-                    <div class="platform-logo">${item.platform_name.substring(0, 2).toUpperCase()}</div>
+                    <div class="platform-logo">${name.substring(0, 2).toUpperCase()}</div>
                     <div>
-                        <div style="font-weight:600;">${item.platform_name}</div>
-                        <div style="font-size:0.8rem; color:#94a3b8;">${item.total_sales} vendite</div>
+                        <div style="font-weight:600;">${name}</div>
+                        <div style="font-size:0.8rem; color:#94a3b8;">${data.count} vendite</div>
                     </div>
                 </div>
-                <div style="font-weight:bold;">€${item.total_amount.toFixed(2)}</div>
+                <div style="font-weight:bold;">€${data.amount.toFixed(2)}</div>
             </div>
-        `;
-        container.innerHTML += el;
-    });
+            `;
+            container.innerHTML += el;
+        });
+
+    } catch (error) {
+        console.error('Error loading platforms:', error);
+    }
 }
 
-// --- Chart.js Setup ---
-let salesChart = null;
-
+// --- Chart Logic ---
 async function loadChartData(period = '7', startDate = null, endDate = null) {
     const canvas = document.getElementById('salesChart');
     if (!canvas) return;
@@ -1035,53 +304,41 @@ async function loadChartData(period = '7', startDate = null, endDate = null) {
     }
 
     // Fetch Data
-    let query = supabase.from('daily_totals')
-        .select('*')
-        .gte('sale_day', queryStart)
-        .lte('sale_day', queryEnd)
-        .order('sale_day', { ascending: true });
-
-    const { data, error } = await query;
+    const { data, error } = await supabase
+        .from('sales') // Querying sales directly is safer if daily_totals view is missing/broken
+        .select('sale_date, amount')
+        .gte('sale_date', queryStart)
+        .lte('sale_date', queryEnd + 'T23:59:59');
 
     let labels = [];
     let values = [];
 
     if (data && data.length > 0) {
-        // Aggregate data by date
         const aggregated = {};
 
-        data.forEach(d => {
-            const day = d.sale_day;
-            if (!aggregated[day]) {
-                aggregated[day] = 0;
-            }
-            aggregated[day] += d.total_amount;
-        });
-
-        // Fill missing dates for continuous chart
-        if (period !== 'today' && period !== 'yesterday' && period !== 'custom') {
-            const start = new Date(queryStart);
-            const end = new Date(queryEnd);
-            for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
-                const dateStr = d.toISOString().split('T')[0];
-                if (!aggregated[dateStr]) aggregated[dateStr] = 0;
-            }
+        // Initialize all days in range with 0
+        const start = new Date(queryStart);
+        const end = new Date(queryEnd);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            aggregated[d.toISOString().split('T')[0]] = 0;
         }
+
+        // Fill with data
+        data.forEach(s => {
+            const day = s.sale_date.split('T')[0];
+            if (aggregated[day] !== undefined) aggregated[day] += s.amount;
+        });
 
         const sortedDates = Object.keys(aggregated).sort();
         labels = sortedDates.map(date => new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }));
         values = sortedDates.map(date => aggregated[date]);
     } else {
-        // Empty state
-        if (period === 'today') labels = ['Oggi'];
-        else if (period === 'yesterday') labels = ['Ieri'];
-        else labels = ['Nessun dato'];
+        labels = ['Nessun dato'];
         values = [0];
     }
 
     if (salesChart) salesChart.destroy();
 
-    // Create Gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
     gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
@@ -1099,223 +356,206 @@ async function loadChartData(period = '7', startDate = null, endDate = null) {
                 tension: 0.4,
                 fill: true,
                 pointBackgroundColor: '#10b981',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6
+                pointRadius: 4
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            layout: {
-                padding: {
-                    left: 10,
-                    right: 20,
-                    top: 20,
-                    bottom: 10
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    titleColor: '#f8fafc',
-                    bodyColor: '#f8fafc',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderWidth: 1,
-                    padding: 10,
-                    displayColors: false,
-                    callbacks: {
-                        label: function (context) {
-                            return '€ ' + context.parsed.y.toFixed(2);
-                        }
-                    }
-                }
-            },
+            plugins: { legend: { display: false } },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: {
-                        color: '#94a3b8',
-                        callback: function (value) { return '€' + value; }
-                    }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: {
-                        color: '#94a3b8',
-                        maxRotation: 0,
-                        autoSkip: true,
-                        maxTicksLimit: 7
-                    }
-                }
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
             }
         }
     });
 }
 
-// --- Utilities ---
-function animateValue(id, start, end, duration, isCurrency = false) {
-    const obj = document.getElementById(id);
-    if (!obj) return;
+function setupChartControls() {
+    const periodSelect = document.getElementById('chart-period');
+    const customDateBtn = document.getElementById('custom-date-btn');
+    const datePicker = document.getElementById('date-range-picker');
+    const applyBtn = document.getElementById('apply-custom-date');
 
-    let startTimestamp = null;
-    const step = (timestamp) => {
-        if (!startTimestamp) startTimestamp = timestamp;
-        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+    if (periodSelect) {
+        periodSelect.addEventListener('change', (e) => {
+            if (e.target.value !== 'custom') {
+                if (datePicker) datePicker.style.display = 'none';
+                loadChartData(e.target.value);
+            }
+        });
+    }
 
-        const value = progress * (end - start) + start;
+    if (customDateBtn && datePicker) {
+        customDateBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            datePicker.style.display = datePicker.style.display === 'flex' ? 'none' : 'flex';
+        });
 
-        if (isCurrency) {
-            obj.innerHTML = '€' + value.toFixed(2);
-        } else {
-            obj.innerHTML = Math.floor(value);
-        }
+        document.addEventListener('click', (e) => {
+            if (!datePicker.contains(e.target) && !customDateBtn.contains(e.target)) {
+                datePicker.style.display = 'none';
+            }
+        });
+    }
 
-        if (progress < 1) {
-            window.requestAnimationFrame(step);
-        }
-    };
-    window.requestAnimationFrame(step);
+    if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+            const start = document.getElementById('date-start').value;
+            const end = document.getElementById('date-end').value;
+            if (start && end) {
+                datePicker.style.display = 'none';
+                loadChartData('custom', start, end);
+            }
+        });
+    }
 }
 
-// --- Modal Logic ---
+// --- Modal & Form Logic ---
 async function setupModalLogic() {
     const modal = document.getElementById('sale-modal');
     const addBtn = document.getElementById('add-sale-btn');
     const closeBtn = document.getElementById('close-modal');
     const cancelBtn = document.getElementById('cancel-btn');
     const form = document.getElementById('sale-form');
+    const platformSelect = document.getElementById('platform-select');
 
-    // Load platforms into select
-    await loadPlatforms();
-
-    // Open modal
-    if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            modal.classList.add('active');
+    // Load Platforms
+    const { data: platforms } = await supabase.from('platforms').select('*').order('name');
+    if (platforms && platformSelect) {
+        platformSelect.innerHTML = ''; // Clear existing
+        platforms.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            platformSelect.appendChild(opt);
         });
     }
 
-    // Close modal
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            modal.classList.remove('active');
-            form.reset();
-        });
-    }
+    // Modal Actions
+    const openModal = () => modal.classList.add('active');
+    const closeModal = () => {
+        modal.classList.remove('active');
+        form.reset();
+    };
 
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-            modal.classList.remove('active');
-            form.reset();
-        });
-    }
+    if (addBtn) addBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-    // Close on outside click
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('active');
-                form.reset();
-            }
-        });
-    }
-
-    // Handle form submit
+    // Form Submit
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            await saveSale();
+            const formData = {
+                platform_id: platformSelect.value,
+                product_name: document.getElementById('product-name').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                currency: document.getElementById('currency').value,
+                sale_date: new Date().toISOString()
+            };
+
+            const { error } = await supabase.from('sales').insert([formData]);
+            if (!error) {
+                showNotification('✅ Vendita aggiunta!', 'Successo');
+                closeModal();
+                loadDashboardData();
+                if (CONFIG.notificationSound) playCashSound();
+            } else {
+                showNotification('❌ Errore', 'Impossibile aggiungere vendita');
+            }
         });
     }
 }
 
-async function loadPlatforms() {
-    const { data, error } = await supabase
-        .from('platforms')
-        .select('*')
-        .eq('active', true)
-        .order('name');
+// --- Email Check Logic ---
+async function handleCheckEmails() {
+    const btn = document.getElementById('check-email-btn');
+    const icon = btn.querySelector('i');
+    const span = btn.querySelector('span');
+    const originalText = span ? span.textContent : '';
 
-    if (error) {
-        console.error('Error loading platforms:', error);
-        return;
+    btn.disabled = true;
+    icon.classList.remove('fa-envelope');
+    icon.classList.add('fa-spinner', 'fa-spin');
+    if (span) span.textContent = 'Controllo...';
+
+    try {
+        const response = await fetch('https://zhgpccmzgyertwnvyiaz.supabase.co/functions/v1/gmail-checker', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${CONFIG.supabaseKey}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            await loadDashboardData();
+            showNotification('✅ Email controllate!', `${result.newSales || 0} nuove vendite.`);
+            if (result.newSales > 0 && CONFIG.notificationSound) playCashSound();
+        } else {
+            throw new Error('API Error');
+        }
+    } catch (error) {
+        console.error(error);
+        showNotification('❌ Errore', 'Controllo fallito');
+    } finally {
+        btn.disabled = false;
+        icon.classList.remove('fa-spinner', 'fa-spin');
+        icon.classList.add('fa-envelope');
+        if (span) span.textContent = originalText;
     }
+}
 
-    const select = document.getElementById('platform-select');
-    select.innerHTML = '<option value="">Seleziona piattaforma...</option>';
+// --- Navigation Logic ---
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item[data-page]');
+    const views = document.querySelectorAll('.view');
 
-    data.forEach(platform => {
-        const option = document.createElement('option');
-        option.value = platform.id;
-        option.textContent = platform.name;
-        select.appendChild(option);
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const pageId = item.dataset.page;
+
+            navItems.forEach(n => n.classList.remove('active'));
+            item.classList.add('active');
+
+            views.forEach(v => v.classList.remove('active'));
+            const target = document.getElementById(`${pageId}-view`);
+            if (target) target.classList.add('active');
+        });
     });
 }
 
-async function saveSale() {
-    const platformId = document.getElementById('platform-select').value;
-    const productName = document.getElementById('product-name').value;
-    const amount = parseFloat(document.getElementById('amount').value);
-    const currency = document.getElementById('currency').value;
-
-    if (!platformId || !productName || !amount) {
-        alert('Compila tutti i campi!');
-        return;
-    }
-
-    const { data, error } = await supabase
-        .from('sales')
-        .insert({
-            platform_id: platformId,
-            product_name: productName,
-            amount: amount,
-            currency: currency,
-            sale_date: new Date().toISOString()
-        })
-        .select();
-
-    if (error) {
-        console.error('Error saving sale:', error);
-        alert('Errore nel salvare la vendita!');
-        return;
-    }
-
-    // Success!
-    playCashSound();
-    document.getElementById('sale-modal').classList.remove('active');
-    document.getElementById('sale-form').reset();
-
-    // Reload dashboard
-    await loadDashboardData();
-
-    // Show success message
-    showNotification('Vendita salvata con successo! 💰');
+// --- Utilities ---
+function setupSound() {
+    const audio = document.getElementById('cash-sound');
+    if (audio) audio.load();
 }
 
-function showNotification(message) {
-    // Simple notification (you can make this fancier)
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-    `;
-    notification.textContent = message;
-    document.body.appendChild(notification);
+function playCashSound() {
+    const audio = document.getElementById('cash-sound');
+    if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(e => console.log('Audio play blocked', e));
+    }
+}
 
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
+function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+}
+
+function showNotification(title, body) {
+    if (CONFIG.enablePushNotifications && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '/favicon.ico' });
+    }
+    console.log(`${title}: ${body}`);
+}
+
+function startAutoRefresh() {
+    setInterval(loadDashboardData, CONFIG.emailCheckInterval);
 }
