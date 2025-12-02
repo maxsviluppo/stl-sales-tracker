@@ -1,0 +1,125 @@
+/* Platforms Table Styles */
+.platform-row:hover {
+    background: rgba(255, 255, 255, 0.03) !important;
+    transform: scale(1.01);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+.platforms-table {
+    min-width: 800px;
+}
+
+/* Mobile Responsive - Card Layout with 2x2 Grid Stats */
+@media (max-width: 768px) {
+
+    /* Hide table header on mobile */
+    .platforms-table thead {
+        display: none !important;
+    }
+
+    /* Reset table display */
+    .platforms-table {
+        display: block !important;
+        min-width: 100% !important;
+    }
+
+    .platforms-table tbody {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    /* Card-style layout for each platform */
+    .platform-row {
+        display: block !important;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 16px;
+        padding: 1rem !important;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .platform-row td {
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    /* Platform header in card */
+    .platform-row td:first-child {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        display: block !important;
+    }
+
+    /* Create 2x2 grid for stats */
+    .platform-row td:not(:first-child) {
+        display: inline-block !important;
+        width: calc(50% - 0.5rem) !important;
+        margin-bottom: 0.75rem;
+        vertical-align: top;
+    }
+
+    /* Add spacing between columns */
+    .platform-row td:nth-child(2),
+    .platform-row td:nth-child(4) {
+        margin-right: 0.75rem;
+    }
+
+    /* Style each stat as a compact box */
+    .platform-stat {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 0.75rem 0.5rem;
+        text-align: center;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 80px;
+    }
+
+    /* Labels */
+    .platform-row td:nth-child(2) .platform-stat::before {
+        content: "📅 Oggi";
+    }
+
+    .platform-row td:nth-child(3) .platform-stat::before {
+        content: "📆 Mese";
+    }
+
+    .platform-row td:nth-child(4) .platform-stat::before {
+        content: "📅 Anno";
+    }
+
+    .platform-row td:nth-child(5) .platform-stat::before {
+        content: "📈 Totale";
+    }
+
+    .platform-stat::before {
+        display: block;
+        font-size: 0.65rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Values */
+    .platform-stat>div:first-child {
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        margin: 0.15rem 0;
+        background: linear-gradient(135deg, var(--text-primary) 0%, rgba(255, 255, 255, 0.7) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .platform-stat>div:last-child {
+        font-size: 0.65rem !important;
+        opacity: 0.7;
+    }
+}

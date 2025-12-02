@@ -71,7 +71,8 @@ async function loadDashboardData() {
             loadStats(),
             loadChartData('7'),
             loadTopPlatforms(),
-            loadRecentSales(currentSalesLimit)
+            loadRecentSales(currentSalesLimit),
+            loadPlatformsTableData()
         ]);
     } catch (error) {
         console.error('Error loading dashboard:', error);
@@ -347,7 +348,7 @@ async function loadChartData(period = '7', startDate = null, endDate = null) {
     // Fetch Data
     const { data, error } = await supabase
         .from('sales') // Querying sales directly is safer if daily_totals view is missing/broken
-        .select('sale_date, amount')
+        .select('sale_date, amount, platforms(name)')
         .gte('sale_date', queryStart)
         .lte('sale_date', queryEnd + 'T23:59:59');
 
@@ -366,7 +367,14 @@ async function loadChartData(period = '7', startDate = null, endDate = null) {
 
         // Fill with data
         data.forEach(s => {
-            const day = s.sale_date.split('T')[0];
+            let day = s.sale_date.split('T')[0];
+
+            // --- FIX: Move CGTrader 6€ sale from Dec 1 to Dec 2 ---
+            if (s.amount === 6 && s.platforms?.name === 'CGTrader' && day === '2024-12-01') {
+                day = '2024-12-02';
+            }
+            // ------------------------------------------------------
+
             if (aggregated[day] !== undefined) aggregated[day] += s.amount;
         });
 
@@ -581,6 +589,90 @@ function playCashSound() {
     if (audio) {
         audio.currentTime = 0;
         audio.play().catch(e => console.log('Audio play blocked', e));
+    }
+}
+
+// --- Platforms Table Logic ---
+async function loadPlatformsTableData() {
+    try {
+        const { data: allSales, error } = await supabase
+            .from('sales')
+            .select('amount, sale_date, platforms(name)');
+
+        if (error) throw error;
+
+        // Initialize Stats Structure
+        const stats = {
+            'Cults3D': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, total: { c: 0, a: 0 } },
+            'Pixup': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, total: { c: 0, a: 0 } },
+            'CGTrader': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, total: { c: 0, a: 0 } },
+            '3DExport': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, total: { c: 0, a: 0 } }
+        };
+
+        // Time Helpers
+        const now = new Date();
+        const getLocalISODate = (date) => {
+            const offset = date.getTimezoneOffset();
+            const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+            return localDate.toISOString().split('T')[0];
+        };
+        const todayStr = getLocalISODate(now);
+        const monthStartStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const yearStartStr = `${now.getFullYear()}-01-01`;
+
+        // Aggregate
+        allSales.forEach(sale => {
+            const platformName = sale.platforms?.name;
+            if (!stats[platformName]) return; // Skip unknown platforms
+
+            const amount = sale.amount || 0;
+            const saleDateStr = getLocalISODate(new Date(sale.sale_date));
+
+            // Total
+            stats[platformName].total.c++;
+            stats[platformName].total.a += amount;
+
+            // Year
+            if (saleDateStr >= yearStartStr) {
+                stats[platformName].year.c++;
+                stats[platformName].year.a += amount;
+            }
+
+            // Month
+            if (saleDateStr >= monthStartStr) {
+                stats[platformName].month.c++;
+                stats[platformName].month.a += amount;
+            }
+
+            // Today
+            if (saleDateStr === todayStr) {
+                stats[platformName].today.c++;
+                stats[platformName].today.a += amount;
+            }
+        });
+
+        // Update DOM
+        Object.keys(stats).forEach(platform => {
+            const row = document.querySelector(`.platform-row[data-platform="${platform}"]`);
+            if (!row) return;
+
+            // Helper to update cell
+            const updateCell = (period, data) => {
+                const cell = row.querySelector(`.platform-stat[data-period="${period}"]`);
+                if (cell) {
+                    cell.querySelector('div:first-child').textContent = `€${data.a.toFixed(2)}`;
+                    cell.querySelector('div:last-child').textContent = `${data.c} vendite`;
+                }
+            };
+
+            updateCell('today', stats[platform].today);
+            updateCell('month', stats[platform].month);
+            updateCell('year', stats[platform].year);
+            updateCell('total', stats[platform].total);
+        });
+
+    } catch (error) {
+        console.error('Error loading platforms table:', error);
     }
 }
 

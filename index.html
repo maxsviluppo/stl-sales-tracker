@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="mobile-header.css">
     <link rel="stylesheet" href="table-compact.css">
     <link rel="stylesheet" href="stats-enhanced.css">
+    <link rel="stylesheet" href="platforms-table.css">
 </head>
 
 <body>
@@ -245,11 +246,229 @@
 
             <!-- Platforms View -->
             <div id="platforms-view" class="view">
-                <div class="glass" style="padding: 2rem; text-align: center;">
-                    <i class="fa-solid fa-layer-group"
-                        style="font-size: 3rem; color: #6366f1; margin-bottom: 1rem;"></i>
-                    <h2>Piattaforme</h2>
-                    <p style="color: #94a3b8;">Sezione in sviluppo</p>
+                <!-- Date Range Selector -->
+                <div class="glass" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <h2 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-layer-group" style="color: #10b981;"></i>
+                            Confronto Piattaforme
+                        </h2>
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <label style="color: var(--text-secondary); font-size: 0.9rem;">Da:</label>
+                                <input type="date" id="platforms-date-start"
+                                    style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 8px; font-size: 0.9rem;">
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <label style="color: var(--text-secondary); font-size: 0.9rem;">A:</label>
+                                <input type="date" id="platforms-date-end"
+                                    style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 8px; font-size: 0.9rem;">
+                            </div>
+                            <button id="platforms-apply-filter" class="btn-success" style="padding: 0.5rem 1rem;">
+                                <i class="fa-solid fa-filter"></i>
+                                <span>Applica</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Platforms Comparison Table -->
+                <div class="glass" style="padding: 1.5rem; overflow-x: auto;">
+                    <table class="platforms-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color);">
+                                <th
+                                    style="text-align: left; padding: 1rem; color: var(--text-secondary); font-weight: 600;">
+                                    Piattaforma
+                                </th>
+                                <th
+                                    style="text-align: center; padding: 1rem; color: var(--text-secondary); font-weight: 600;">
+                                    <i class="fa-solid fa-calendar-day"></i> Oggi
+                                </th>
+                                <th
+                                    style="text-align: center; padding: 1rem; color: var(--text-secondary); font-weight: 600;">
+                                    <i class="fa-solid fa-calendar-week"></i> Questo Mese
+                                </th>
+                                <th
+                                    style="text-align: center; padding: 1rem; color: var(--text-secondary); font-weight: 600;">
+                                    <i class="fa-solid fa-calendar"></i> Quest'Anno
+                                </th>
+                                <th
+                                    style="text-align: center; padding: 1rem; color: var(--text-secondary); font-weight: 600;">
+                                    <i class="fa-solid fa-chart-line"></i> Totale
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="platforms-table-body">
+                            <!-- Cults3D -->
+                            <tr class="platform-row" data-platform="Cults3D"
+                                style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;">
+                                <td style="padding: 1.5rem 1rem;">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div
+                                            style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(59, 130, 246, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #3b82f6;">
+                                            <i class="fa-solid fa-cube"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 600; font-size: 1.1rem;">Cults3D</div>
+                                            <div style="font-size: 0.85rem; color: var(--text-secondary);">cults3d.com
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="today" data-platform="Cults3D">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="month" data-platform="Cults3D">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="year" data-platform="Cults3D">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="total" data-platform="Cults3D">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Pixup -->
+                            <tr class="platform-row" data-platform="Pixup"
+                                style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;">
+                                <td style="padding: 1.5rem 1rem;">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div
+                                            style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05)); border: 1px solid rgba(16, 185, 129, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #10b981;">
+                                            <i class="fa-solid fa-rocket"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 600; font-size: 1.1rem;">Pixup</div>
+                                            <div style="font-size: 0.85rem; color: var(--text-secondary);">pixup.com
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="today" data-platform="Pixup">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="month" data-platform="Pixup">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="year" data-platform="Pixup">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="total" data-platform="Pixup">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- CGTrader -->
+                            <tr class="platform-row" data-platform="CGTrader"
+                                style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;">
+                                <td style="padding: 1.5rem 1rem;">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div
+                                            style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border: 1px solid rgba(245, 158, 11, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #f59e0b;">
+                                            <i class="fa-solid fa-box"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 600; font-size: 1.1rem;">CGTrader</div>
+                                            <div style="font-size: 0.85rem; color: var(--text-secondary);">cgtrader.com
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="today" data-platform="CGTrader">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="month" data-platform="CGTrader">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="year" data-platform="CGTrader">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="total" data-platform="CGTrader">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- 3DExport -->
+                            <tr class="platform-row" data-platform="3DExport" style="transition: all 0.3s;">
+                                <td style="padding: 1.5rem 1rem;">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div
+                                            style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(139, 92, 246, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #8b5cf6;">
+                                            <i class="fa-solid fa-globe"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 600; font-size: 1.1rem;">3DExport</div>
+                                            <div style="font-size: 0.85rem; color: var(--text-secondary);">3dexport.com
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="today" data-platform="3DExport">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="month" data-platform="3DExport">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="year" data-platform="3DExport">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem;">
+                                    <div class="platform-stat" data-period="total" data-platform="3DExport">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
