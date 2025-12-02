@@ -583,6 +583,7 @@ function playCashSound() {
     }
 }
 
+// --- Notification System ---
 function requestNotificationPermission() {
     if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
@@ -590,10 +591,87 @@ function requestNotificationPermission() {
 }
 
 function showNotification(title, body) {
+    // 1. Browser Notification (if enabled)
     if (CONFIG.enablePushNotifications && 'Notification' in window && Notification.permission === 'granted') {
         new Notification(title, { body, icon: '/favicon.ico' });
     }
+
+    // 2. Visual Toast Notification (Always show)
+    showToast(title, body);
+
     console.log(`${title}: ${body}`);
+}
+
+function showToast(title, message) {
+    // Create toast container if not exists
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        `;
+        document.body.appendChild(container);
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.style.cssText = `
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #f8fafc;
+        padding: 12px 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 300px;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        pointer-events: auto;
+    `;
+
+    // Determine icon based on title
+    let icon = '🔔';
+    if (title.includes('✅')) icon = '✅';
+    if (title.includes('❌')) icon = '❌';
+    if (title.includes('🎉')) icon = '🎉';
+
+    toast.innerHTML = `
+        <div style="font-size: 1.5rem;">${icon}</div>
+        <div style="display: flex; flex-direction: column;">
+            <div style="font-weight: 600; font-size: 0.95rem;">${title.replace(/^[✅❌🎉]\s*/, '')}</div>
+            <div style="font-size: 0.85rem; color: #94a3b8;">${message}</div>
+        </div>
+    `;
+
+    container.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+    });
+
+    // Remove after 4 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 300);
+    }, 4000);
 }
 
 function startAutoRefresh() {
