@@ -27,7 +27,12 @@
         font-size: 1.75rem !important;
         font-weight: 800 !important;
         color: #10b981 !important;
-        letter-spacing: -0.5px !important;
+        letter-spacing: -0.5px !important;`r`n        border-bottom: 2px solid #10b981 !important;`r`n        padding-bottom: 4px !important;`r`n        margin-bottom: 4px !important;`r`n        width: fit-content !important;`r`n        filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6)) !important;
+        border-bottom: 2px solid #10b981 !important;
+        padding-bottom: 4px !important;
+        margin-bottom: 4px !important;
+        width: fit-content !important;
+        filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6)) !important;
     }
 
     /* 3. Actions (Row 2, Right) */
