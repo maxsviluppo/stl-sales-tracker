@@ -683,10 +683,202 @@ function setupMobileHeader() {
     const actionsContainer = document.querySelector('.actions');
     if (!actionsContainer) return;
 
-    // Check if button already exists
+    // Check if buttons already exist
     if (document.getElementById('mobile-settings-btn')) return;
 
-    // Create Settings Button with toggle switch effect
+    // ========== CREATE HISTORY BUTTON (TOGGLE SWITCH) ==========
+    const historyBtn = document.createElement('button');
+    historyBtn.id = 'mobile-history-btn';
+    historyBtn.className = 'btn-history-toggle';
+    historyBtn.title = 'Storico';
+
+    // Initial style (OFF state - gray)
+    historyBtn.style.cssText = `
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: rgba(148, 163, 184, 0.1);
+        border: 2px solid rgba(148, 163, 184, 0.3);
+        color: #94a3b8;
+    `;
+
+    historyBtn.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i>';
+
+    // Function to update history button state
+    const updateHistoryButtonState = (isActive) => {
+        if (isActive) {
+            // ON state - green/active
+            historyBtn.style.background = 'rgba(16, 185, 129, 0.2)';
+            historyBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+            historyBtn.style.color = '#10b981';
+            historyBtn.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.3)';
+        } else {
+            // OFF state - gray/inactive
+            historyBtn.style.background = 'rgba(148, 163, 184, 0.1)';
+            historyBtn.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+            historyBtn.style.color = '#94a3b8';
+            historyBtn.style.boxShadow = 'none';
+        }
+    };
+
+    // Add click action (Toggle: History <-> Dashboard)
+    historyBtn.addEventListener('click', () => {
+        const historySection = document.getElementById('history-view');
+
+        if (historySection) {
+            // Check if we are currently on the history page
+            const isHistoryActive = historySection.classList.contains('active');
+
+            if (isHistoryActive) {
+                // If on history, go back to Dashboard
+                const dashboardNav = document.querySelector('.nav-item[data-page="dashboard"]');
+                if (dashboardNav) dashboardNav.click();
+                updateHistoryButtonState(false); // Turn OFF
+            } else {
+                // If not on history, go to History
+                const historyNav = document.querySelector('.nav-item[data-page="history"]');
+                if (historyNav) historyNav.click();
+                updateHistoryButtonState(true); // Turn ON
+            }
+        } else {
+            showToast('🕒 Storico', 'Funzionalità in arrivo...');
+        }
+    });
+
+    // ========== CREATE PLATFORMS BUTTON (TOGGLE SWITCH) ==========
+    const platformsBtn = document.createElement('button');
+    platformsBtn.id = 'mobile-platforms-btn';
+    platformsBtn.className = 'btn-platforms-toggle';
+    platformsBtn.title = 'Piattaforme';
+
+    // Initial style (OFF state - gray)
+    platformsBtn.style.cssText = `
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: rgba(148, 163, 184, 0.1);
+        border: 2px solid rgba(148, 163, 184, 0.3);
+        color: #94a3b8;
+    `;
+
+    platformsBtn.innerHTML = '<i class="fa-solid fa-layer-group"></i>';
+
+    // Function to update platforms button state
+    const updatePlatformsButtonState = (isActive) => {
+        if (isActive) {
+            // ON state - green/active
+            platformsBtn.style.background = 'rgba(16, 185, 129, 0.2)';
+            platformsBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+            platformsBtn.style.color = '#10b981';
+            platformsBtn.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.3)';
+        } else {
+            // OFF state - gray/inactive
+            platformsBtn.style.background = 'rgba(148, 163, 184, 0.1)';
+            platformsBtn.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+            platformsBtn.style.color = '#94a3b8';
+            platformsBtn.style.boxShadow = 'none';
+        }
+    };
+
+    // Add click action (Toggle: Platforms <-> Dashboard)
+    platformsBtn.addEventListener('click', () => {
+        const platformsSection = document.getElementById('platforms-view');
+
+        if (platformsSection) {
+            // Check if we are currently on the platforms page
+            const isPlatformsActive = platformsSection.classList.contains('active');
+
+            if (isPlatformsActive) {
+                // If on platforms, go back to Dashboard
+                const dashboardNav = document.querySelector('.nav-item[data-page="dashboard"]');
+                if (dashboardNav) dashboardNav.click();
+                updatePlatformsButtonState(false); // Turn OFF
+            } else {
+                // If not on platforms, go to Platforms
+                const platformsNav = document.querySelector('.nav-item[data-page="platforms"]');
+                if (platformsNav) platformsNav.click();
+                updatePlatformsButtonState(true); // Turn ON
+            }
+        } else {
+            showToast('📦 Piattaforme', 'Funzionalità in arrivo...');
+        }
+    });
+
+    // ========== CREATE ANALYTICS BUTTON (TOGGLE SWITCH) ==========
+    const analyticsBtn = document.createElement('button');
+    analyticsBtn.id = 'mobile-analytics-btn';
+    analyticsBtn.className = 'btn-analytics-toggle';
+    analyticsBtn.title = 'Analytics';
+
+    // Initial style (OFF state - gray)
+    analyticsBtn.style.cssText = `
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: rgba(148, 163, 184, 0.1);
+        border: 2px solid rgba(148, 163, 184, 0.3);
+        color: #94a3b8;
+    `;
+
+    analyticsBtn.innerHTML = '<i class="fa-solid fa-chart-pie"></i>';
+
+    // Track if we're on analytics page (for external navigation)
+    let isOnAnalyticsPage = window.location.pathname.includes('analytics.html');
+
+    // Function to update analytics button state
+    const updateAnalyticsButtonState = (isActive) => {
+        if (isActive) {
+            // ON state - green/active
+            analyticsBtn.style.background = 'rgba(16, 185, 129, 0.2)';
+            analyticsBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+            analyticsBtn.style.color = '#10b981';
+            analyticsBtn.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.3)';
+        } else {
+            // OFF state - gray/inactive
+            analyticsBtn.style.background = 'rgba(148, 163, 184, 0.1)';
+            analyticsBtn.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+            analyticsBtn.style.color = '#94a3b8';
+            analyticsBtn.style.boxShadow = 'none';
+        }
+    };
+
+    // Set initial state if on analytics page
+    if (isOnAnalyticsPage) {
+        updateAnalyticsButtonState(true);
+    }
+
+    // Analytics button click - Toggle between Dashboard and Analytics
+    analyticsBtn.addEventListener('click', () => {
+        const currentPath = window.location.pathname;
+
+        if (currentPath.includes('analytics.html')) {
+            // If on analytics, go back to Dashboard (index.html)
+            window.location.href = 'index.html';
+        } else {
+            // If on dashboard, go to Analytics
+            window.location.href = 'analytics.html';
+        }
+    });
+
+    // ========== CREATE SETTINGS BUTTON (TOGGLE SWITCH) ==========
     const settingsBtn = document.createElement('button');
     settingsBtn.id = 'mobile-settings-btn';
     settingsBtn.className = 'btn-settings-toggle'; // Custom class for toggle
@@ -710,8 +902,8 @@ function setupMobileHeader() {
 
     settingsBtn.innerHTML = '<i class="fa-solid fa-gear"></i>';
 
-    // Function to update button state
-    const updateButtonState = (isActive) => {
+    // Function to update settings button state
+    const updateSettingsButtonState = (isActive) => {
         if (isActive) {
             // ON state - green/active
             settingsBtn.style.background = 'rgba(16, 185, 129, 0.2)';
@@ -739,27 +931,33 @@ function setupMobileHeader() {
                 // If on settings, go back to Dashboard
                 const dashboardNav = document.querySelector('.nav-item[data-page="dashboard"]');
                 if (dashboardNav) dashboardNav.click();
-                updateButtonState(false); // Turn OFF
+                updateSettingsButtonState(false); // Turn OFF
             } else {
                 // If not on settings, go to Settings
                 const settingsNav = document.querySelector('.nav-item[data-page="settings"]');
                 if (settingsNav) settingsNav.click();
-                updateButtonState(true); // Turn ON
+                updateSettingsButtonState(true); // Turn ON
             }
         } else {
             showToast('⚙️ Impostazioni', 'Funzionalità in arrivo...');
         }
     });
 
-    // Monitor navigation changes to update button state
+    // Monitor navigation changes to update button states
     const navItems = document.querySelectorAll('.nav-item[data-page]');
     navItems.forEach(item => {
         item.addEventListener('click', () => {
             const pageId = item.dataset.page;
-            updateButtonState(pageId === 'settings');
+            updateHistoryButtonState(pageId === 'history');
+            updatePlatformsButtonState(pageId === 'platforms');
+            updateSettingsButtonState(pageId === 'settings');
         });
     });
 
-    // Append to actions
+    // ========== APPEND BUTTONS TO ACTIONS ==========
+    // Add in order: History, Platforms, Analytics, Settings
+    actionsContainer.appendChild(historyBtn);
+    actionsContainer.appendChild(platformsBtn);
+    actionsContainer.appendChild(analyticsBtn);
     actionsContainer.appendChild(settingsBtn);
 }
