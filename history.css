@@ -1,0 +1,92 @@
+/* History View Styles */
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+    padding: 0.6rem 0.8rem;
+    /* Ridotto padding per stringere la tabella */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+}
+
+/* Stile specifico per la colonna Data (la prima) */
+.history-table td:first-child span {
+    font-size: 0.85rem !important;
+    /* Ridotta dimensione data */
+}
+
+.history-table td:first-child span:last-child {
+    font-size: 0.75rem !important;
+    /* Ridotta dimensione ora */
+}
+
+/* Stile specifico per la colonna Importo (l'ultima) */
+.history-table td:last-child {
+    white-space: nowrap;
+    /* Evita che l'importo vada a capo */
+    width: 1%;
+    /* Forza la colonna ad essere stretta quanto basta */
+}
+
+.history-table tr:last-child td {
+    border-bottom: none;
+}
+
+.history-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .history-table thead {
+        display: none;
+    }
+
+    .history-table,
+    .history-table tbody,
+    .history-table tr,
+    .history-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .history-table tr {
+        margin-bottom: 0.75rem;
+        /* Ridotto margine tra card */
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        padding: 0.75rem;
+        /* Ridotto padding card */
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .history-table td {
+        padding: 0.4rem 0;
+        /* Ridotto padding righe interne */
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: right;
+    }
+
+    .history-table td:last-child {
+        border-bottom: none;
+    }
+
+    .history-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-align: left;
+        margin-right: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .filters-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
