@@ -90,7 +90,7 @@
 }
 
 .stat-value {
-    font-size: 1.5rem !important;
+    font-size: 21px !important;
     font-weight: 700 !important;
     margin-bottom: 0.3rem !important;
     background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
