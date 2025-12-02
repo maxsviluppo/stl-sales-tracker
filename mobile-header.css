@@ -1,12 +1,12 @@
 /* Mobile Header Layout with App Name */
 @media (max-width: 768px) {
 
-    /* Mobile Header - 2 Row Grid Layout */
+    /* Mobile Header - 2 Row Layout */
     .top-bar {
         display: grid !important;
-        grid-template-columns: auto 1fr auto !important;
+        grid-template-columns: 1fr !important;
         grid-template-rows: auto auto !important;
-        gap: 0.5rem 1rem !important;
+        gap: 0.5rem !important;
         padding: 1rem !important;
         background: var(--bg-dark) !important;
         position: sticky !important;
@@ -14,31 +14,31 @@
         z-index: 100 !important;
     }
 
-    /* 1. Hamburger Menu (Top Left, Row 1) */
+    /* 1. Hamburger Menu - NASCOSTO */
     .mobile-menu-toggle {
-        grid-column: 1 !important;
-        grid-row: 1 !important;
+        display: none !important;
     }
 
-    /* 2. App Name "STL Tracker" (Row 2, Left) - GREEN & BIGGER */
+    /* 2. App Name "STL Tracker" (Row 1, Left) */
     .top-bar::before {
         content: "STL Tracker" !important;
-        grid-column: 1 / 2 !important;
-        grid-row: 2 !important;
-        font-size: 2rem !important;
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        font-size: 1.75rem !important;
         font-weight: 800 !important;
         color: #10b981 !important;
         letter-spacing: -0.5px !important;
     }
 
-    /* 3. Actions (Top Right, Row 1) */
+    /* 3. Actions (Row 2, Right) */
     .actions {
-        grid-column: 3 !important;
-        grid-row: 1 !important;
-        width: auto !important;
+        grid-column: 1 !important;
+        grid-row: 2 !important;
+        width: 100% !important;
         display: flex !important;
         justify-content: flex-end !important;
-        gap: 0.75rem !important;
+        /* Allineate a DESTRA */
+        gap: 1rem !important;
     }
 
     /* 4. Hide Page Title on Mobile */
@@ -50,6 +50,6 @@
 /* Smaller app name on very small screens */
 @media (max-width: 480px) {
     .top-bar::before {
-        font-size: 1.75rem !important;
+        font-size: 1.5rem !important;
     }
 }

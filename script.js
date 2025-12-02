@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup Features
     await setupModalLogic();
     requestNotificationPermission();
+    setupMobileHeader(); // Add Settings Button
 
     // Initial Data Load
     await loadDashboardData();
@@ -676,4 +677,89 @@ function showToast(title, message) {
 
 function startAutoRefresh() {
     setInterval(loadDashboardData, CONFIG.emailCheckInterval);
+}
+
+function setupMobileHeader() {
+    const actionsContainer = document.querySelector('.actions');
+    if (!actionsContainer) return;
+
+    // Check if button already exists
+    if (document.getElementById('mobile-settings-btn')) return;
+
+    // Create Settings Button with toggle switch effect
+    const settingsBtn = document.createElement('button');
+    settingsBtn.id = 'mobile-settings-btn';
+    settingsBtn.className = 'btn-settings-toggle'; // Custom class for toggle
+    settingsBtn.title = 'Impostazioni';
+
+    // Initial style (OFF state - gray)
+    settingsBtn.style.cssText = `
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: rgba(148, 163, 184, 0.1);
+        border: 2px solid rgba(148, 163, 184, 0.3);
+        color: #94a3b8;
+    `;
+
+    settingsBtn.innerHTML = '<i class="fa-solid fa-gear"></i>';
+
+    // Function to update button state
+    const updateButtonState = (isActive) => {
+        if (isActive) {
+            // ON state - green/active
+            settingsBtn.style.background = 'rgba(16, 185, 129, 0.2)';
+            settingsBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+            settingsBtn.style.color = '#10b981';
+            settingsBtn.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.3)';
+        } else {
+            // OFF state - gray/inactive
+            settingsBtn.style.background = 'rgba(148, 163, 184, 0.1)';
+            settingsBtn.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+            settingsBtn.style.color = '#94a3b8';
+            settingsBtn.style.boxShadow = 'none';
+        }
+    };
+
+    // Add click action (Toggle: Settings <-> Dashboard)
+    settingsBtn.addEventListener('click', () => {
+        const settingsSection = document.getElementById('settings-view');
+
+        if (settingsSection) {
+            // Check if we are currently on the settings page
+            const isSettingsActive = settingsSection.classList.contains('active');
+
+            if (isSettingsActive) {
+                // If on settings, go back to Dashboard
+                const dashboardNav = document.querySelector('.nav-item[data-page="dashboard"]');
+                if (dashboardNav) dashboardNav.click();
+                updateButtonState(false); // Turn OFF
+            } else {
+                // If not on settings, go to Settings
+                const settingsNav = document.querySelector('.nav-item[data-page="settings"]');
+                if (settingsNav) settingsNav.click();
+                updateButtonState(true); // Turn ON
+            }
+        } else {
+            showToast('⚙️ Impostazioni', 'Funzionalità in arrivo...');
+        }
+    });
+
+    // Monitor navigation changes to update button state
+    const navItems = document.querySelectorAll('.nav-item[data-page]');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const pageId = item.dataset.page;
+            updateButtonState(pageId === 'settings');
+        });
+    });
+
+    // Append to actions
+    actionsContainer.appendChild(settingsBtn);
 }
