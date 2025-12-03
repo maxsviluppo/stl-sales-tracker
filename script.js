@@ -587,40 +587,14 @@ function setupNavigation() {
 // --- Utilities ---
 function setupSound() {
     const audio = document.getElementById('cash-sound');
-    if (audio) {
-        audio.load();
-        audio.volume = 1.0;
-    }
-
-    // Test Sound Button Listener
-    const testBtn = document.getElementById('test-sound-btn');
-    if (testBtn) {
-        testBtn.addEventListener('click', () => {
-            console.log('Testing sound...');
-            playCashSound(true);
-        });
-    }
+    if (audio) audio.load();
 }
 
-function playCashSound(force = false) {
-    if (!CONFIG.notificationSound && !force) return;
-
+function playCashSound() {
     const audio = document.getElementById('cash-sound');
     if (audio) {
-        console.log('Playing cash sound! 🎵');
         audio.currentTime = 0;
-        const promise = audio.play();
-
-        if (promise !== undefined) {
-            promise.then(_ => {
-                // Autoplay started!
-            }).catch(error => {
-                console.log('Audio play blocked or failed:', error);
-                // Fallback: try to play on next interaction
-            });
-        }
-    } else {
-        console.error('Audio element not found!');
+        audio.play().catch(e => console.log('Audio play blocked', e));
     }
 }
 
