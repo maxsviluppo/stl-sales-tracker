@@ -184,7 +184,7 @@ INSERT INTO platforms (name, email_pattern, active) VALUES
     ('Cults3D', 'cults3d.com', true),
     ('CGTrader', 'cgtrader.com', true),
     ('3DExport', '3dexport.com', true),
-    ('Pixup', 'pixup', true)
+    ('Pixup', 'pixup3d.com', true)
 ON CONFLICT (name) DO NOTHING;
 
 -- Inserisci gli account email (NOTA: dovrai aggiungere le credenziali in modo sicuro)
