@@ -47,31 +47,8 @@ async function loadPlatformsSummary() {
 
     container.innerHTML = '';
 
-    // Create table with all metrics (no averages)
-    let html = `
-        <div class="table-responsive">
-            <table class="sales-table">
-                <thead>
-                    <tr>
-                        <th>Piattaforma</th>
-                        <th colspan="2" style="text-align: center; border-bottom: 1px solid var(--border-color);">Giornaliero</th>
-                        <th colspan="2" style="text-align: center; border-bottom: 1px solid var(--border-color);">Mensile</th>
-                        <th colspan="2" style="text-align: center; border-bottom: 1px solid var(--border-color);">Annuale</th>
-                        <th>Prodotti</th>
-                    </tr>
-                    <tr style="font-size: 0.85rem; color: var(--text-secondary);">
-                        <th></th>
-                        <th>Vendite</th>
-                        <th>Ricavo</th>
-                        <th>Vendite</th>
-                        <th>Ricavo</th>
-                        <th>Vendite</th>
-                        <th>Ricavo</th>
-                        <th>Unici</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
+    // Prepare data for all platforms
+    const platformsData = [];
 
     for (const platform of data) {
         // Get daily stats
@@ -100,27 +77,125 @@ async function loadPlatformsSummary() {
 
         const color = platformColors[platform.name] || '#6366f1';
 
-        html += `
-            <tr>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${color};"></div>
-                        <strong>${platform.name}</strong>
-                    </div>
-                </td>
-                <td>${dailyData?.total_sales || 0}</td>
-                <td style="color: var(--accent-color); font-weight: 600;">€${(dailyData?.total_amount || 0).toFixed(2)}</td>
-                <td>${monthlyData?.total_sales || 0}</td>
-                <td style="color: var(--accent-color); font-weight: 600;">€${(monthlyData?.total_amount || 0).toFixed(2)}</td>
-                <td>${yearlyData?.total_sales || 0}</td>
-                <td style="color: var(--accent-color); font-weight: 600;">€${(yearlyData?.total_amount || 0).toFixed(2)}</td>
-                <td><span class="status-badge status-completed">${platform.unique_products || 0}</span></td>
-            </tr>
-        `;
+        platformsData.push({
+            name: platform.name,
+            color: color,
+            uniqueProducts: platform.unique_products || 0,
+            daily: {
+                sales: dailyData?.total_sales || 0,
+                revenue: dailyData?.total_amount || 0
+            },
+            monthly: {
+                sales: monthlyData?.total_sales || 0,
+                revenue: monthlyData?.total_amount || 0
+            },
+            yearly: {
+                sales: yearlyData?.total_sales || 0,
+                revenue: yearlyData?.total_amount || 0
+            }
+        });
     }
 
-    html += '</tbody></table></div>';
+    // Create carousel structure
+    let html = `
+        <div class="platforms-carousel-wrapper">
+            <div class="platforms-carousel" id="platforms-carousel">
+                <!-- Daily Slide -->
+                <div class="carousel-slide active">
+                    <h4 class="carousel-slide-title">Giornaliero</h4>
+                    <div class="platforms-cards">
+                        ${platformsData.map(p => `
+                            <div class="platform-card">
+                                <div class="platform-card-header">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${p.color};"></div>
+                                        <strong>${p.name}</strong>
+                                    </div>
+                                </div>
+                                <div class="platform-card-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-label">Vendite</span>
+                                        <span class="stat-value">${p.daily.sales}</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Ricavo</span>
+                                        <span class="stat-value highlight">€${p.daily.revenue.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <!-- Monthly Slide -->
+                <div class="carousel-slide">
+                    <h4 class="carousel-slide-title">Mensile</h4>
+                    <div class="platforms-cards">
+                        ${platformsData.map(p => `
+                            <div class="platform-card">
+                                <div class="platform-card-header">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${p.color};"></div>
+                                        <strong>${p.name}</strong>
+                                    </div>
+                                </div>
+                                <div class="platform-card-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-label">Vendite</span>
+                                        <span class="stat-value">${p.monthly.sales}</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Ricavo</span>
+                                        <span class="stat-value highlight">€${p.monthly.revenue.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <!-- Yearly Slide -->
+                <div class="carousel-slide">
+                    <h4 class="carousel-slide-title">Annuale</h4>
+                    <div class="platforms-cards">
+                        ${platformsData.map(p => `
+                            <div class="platform-card">
+                                <div class="platform-card-header">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${p.color};"></div>
+                                        <strong>${p.name}</strong>
+                                    </div>
+                                    <span class="products-badge">${p.uniqueProducts} prodotti</span>
+                                </div>
+                                <div class="platform-card-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-label">Vendite</span>
+                                        <span class="stat-value">${p.yearly.sales}</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Ricavo</span>
+                                        <span class="stat-value highlight">€${p.yearly.revenue.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Carousel Dots -->
+            <div class="carousel-dots">
+                <span class="dot active" data-slide="0"></span>
+                <span class="dot" data-slide="1"></span>
+                <span class="dot" data-slide="2"></span>
+            </div>
+        </div>
+    `;
+
     container.innerHTML = html;
+
+    // Initialize carousel
+    initPlatformsCarousel();
 }
 
 async function loadComparisonChart() {
@@ -181,25 +256,103 @@ async function loadComparisonChart() {
         options: {
             responsive: true,
             maintainAspectRatio: true,
+            aspectRatio: window.innerWidth < 768 ? 1.2 : 2,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            animation: {
+                duration: 800,
+                easing: 'easeInOutQuart'
+            },
             plugins: {
                 legend: {
                     display: true,
-                    labels: { color: '#f8fafc' }
+                    position: window.innerWidth < 768 ? 'top' : 'top',
+                    labels: {
+                        color: '#f8fafc',
+                        padding: 15,
+                        font: {
+                            size: 12,
+                            weight: '500'
+                        },
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        boxWidth: 8,
+                        boxHeight: 8
+                    }
                 },
                 tooltip: {
+                    enabled: true,
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    titleColor: '#10b981',
+                    titleFont: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    bodyColor: '#f8fafc',
+                    bodyFont: {
+                        size: 12
+                    },
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: true,
+                    callbacks: {
+                        label: function (context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                const metric = document.getElementById('chart-metric')?.value || 'revenue';
+                                if (metric === 'revenue' || metric === 'avg') {
+                                    label += '€' + context.parsed.y.toFixed(2);
+                                } else {
+                                    label += context.parsed.y;
+                                }
+                            }
+                            return label;
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: '#334155' }
+                    ticks: {
+                        color: '#94a3b8',
+                        font: {
+                            size: 11
+                        },
+                        callback: function (value) {
+                            const metric = document.getElementById('chart-metric')?.value || 'revenue';
+                            if (metric === 'revenue' || metric === 'avg') {
+                                return '€' + value.toFixed(0);
+                            }
+                            return value;
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(51, 65, 85, 0.5)',
+                        drawBorder: false
+                    }
                 },
                 x: {
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: '#334155' }
+                    ticks: {
+                        color: '#94a3b8',
+                        font: {
+                            size: 10
+                        },
+                        maxRotation: 45,
+                        minRotation: 0
+                    },
+                    grid: {
+                        color: 'rgba(51, 65, 85, 0.3)',
+                        drawBorder: false
+                    }
                 }
             }
         }
@@ -230,18 +383,44 @@ async function loadDistributionCharts() {
                 datasets: [{
                     data: revenues,
                     backgroundColor: colors,
-                    borderWidth: 2,
-                    borderColor: '#0f172a'
+                    borderWidth: 3,
+                    borderColor: '#0f172a',
+                    hoverBorderWidth: 4,
+                    hoverBorderColor: '#10b981',
+                    hoverOffset: 8
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: window.innerWidth < 768 ? 1 : 1.8,
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000,
+                    easing: 'easeInOutQuart'
+                },
                 plugins: {
                     legend: {
-                        position: 'bottom',
-                        labels: { color: '#f8fafc', padding: 15 }
+                        position: 'right',
+                        labels: {
+                            color: '#f8fafc',
+                            padding: 12,
+                            font: {
+                                size: 11
+                            },
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
                     },
                     tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleColor: '#10b981',
+                        bodyColor: '#f8fafc',
+                        borderColor: '#10b981',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true,
                         callbacks: {
                             label: (context) => {
                                 const label = context.label || '';
@@ -268,18 +447,44 @@ async function loadDistributionCharts() {
                 datasets: [{
                     data: sales,
                     backgroundColor: colors,
-                    borderWidth: 2,
-                    borderColor: '#0f172a'
+                    borderWidth: 3,
+                    borderColor: '#0f172a',
+                    hoverBorderWidth: 4,
+                    hoverBorderColor: '#10b981',
+                    hoverOffset: 8
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: window.innerWidth < 768 ? 1 : 1.8,
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000,
+                    easing: 'easeInOutQuart'
+                },
                 plugins: {
                     legend: {
-                        position: 'bottom',
-                        labels: { color: '#f8fafc', padding: 15 }
+                        position: 'right',
+                        labels: {
+                            color: '#f8fafc',
+                            padding: 12,
+                            font: {
+                                size: 11
+                            },
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
                     },
                     tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleColor: '#10b981',
+                        bodyColor: '#f8fafc',
+                        borderColor: '#10b981',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true,
                         callbacks: {
                             label: (context) => {
                                 const label = context.label || '';
@@ -458,4 +663,83 @@ function setupEventListeners() {
             setTimeout(() => icon.classList.remove('fa-spin'), 1000);
         });
     }
+}
+
+// Platforms Carousel Logic
+function initPlatformsCarousel() {
+    const carousel = document.getElementById('platforms-carousel');
+    const slides = carousel?.querySelectorAll('.carousel-slide');
+    const dots = document.querySelectorAll('.carousel-dots .dot');
+
+    if (!carousel || !slides || slides.length === 0) return;
+
+    let currentSlide = 0;
+    let startX = 0;
+    let isDragging = false;
+
+    // Go to specific slide
+    function goToSlide(index) {
+        if (index < 0 || index >= slides.length) return;
+
+        // Update dots
+        dots.forEach((dot, i) => {
+            dot.classList.toggle('active', i === index);
+        });
+
+        currentSlide = index;
+
+        // Translate carousel
+        carousel.style.transform = `translateX(-${index * 100}%)`;
+    }
+
+    // Touch/Mouse events for swipe
+    function handleStart(e) {
+        startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+        isDragging = true;
+        carousel.style.transition = 'none';
+    }
+
+    function handleMove(e) {
+        if (!isDragging) return;
+
+        const currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+        const diff = startX - currentX;
+        const threshold = 50; // Minimum swipe distance
+
+        if (Math.abs(diff) > threshold) {
+            if (diff > 0 && currentSlide < slides.length - 1) {
+                // Swipe left - next slide
+                goToSlide(currentSlide + 1);
+                isDragging = false;
+            } else if (diff < 0 && currentSlide > 0) {
+                // Swipe right - previous slide
+                goToSlide(currentSlide - 1);
+                isDragging = false;
+            }
+        }
+    }
+
+    function handleEnd() {
+        isDragging = false;
+        carousel.style.transition = 'transform 0.3s ease';
+    }
+
+    // Add event listeners
+    carousel.addEventListener('touchstart', handleStart, { passive: true });
+    carousel.addEventListener('touchmove', handleMove, { passive: true });
+    carousel.addEventListener('touchend', handleEnd);
+
+    carousel.addEventListener('mousedown', handleStart);
+    carousel.addEventListener('mousemove', handleMove);
+    carousel.addEventListener('mouseup', handleEnd);
+    carousel.addEventListener('mouseleave', handleEnd);
+
+    // Dots navigation
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => goToSlide(index));
+    });
+
+    // Initialize first slide
+    carousel.style.transition = 'transform 0.3s ease';
+    goToSlide(0);
 }

@@ -247,7 +247,7 @@
 
             <!-- Platforms View -->
             <div id="platforms-view" class="view">
-                <!-- Date Range Selector -->
+                <!-- Date Range Selector (Redesigned) -->
                 <div class="glass" style="padding: 1.5rem; margin-bottom: 1.5rem;">
                     <div
                         style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
@@ -255,21 +255,32 @@
                             <i class="fa-solid fa-layer-group" style="color: #10b981;"></i>
                             Confronto Piattaforme
                         </h2>
+
                         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <label style="color: var(--text-secondary); font-size: 0.9rem;">Da:</label>
+                            <!-- Period Dropdown -->
+                            <div style="position: relative;">
+                                <select id="platforms-period-filter"
+                                    style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.6rem 2.5rem 0.6rem 1rem; border-radius: 10px; font-size: 0.95rem; cursor: pointer; appearance: none; min-width: 180px; transition: all 0.3s ease;">
+                                    <option value="all">Tutto lo storico</option>
+                                    <option value="today">Oggi</option>
+                                    <option value="yesterday">Ieri</option>
+                                    <option value="month">Questo Mese</option>
+                                    <option value="year">Quest'Anno</option>
+                                    <option value="custom">Personalizzato</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down"
+                                    style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none; font-size: 0.8rem;"></i>
+                            </div>
+
+                            <!-- Custom Date Inputs (Hidden by default, Auto-apply) -->
+                            <div id="platforms-custom-date-container"
+                                style="display: none; gap: 0.5rem; align-items: center; animation: fadeIn 0.3s ease;">
                                 <input type="date" id="platforms-date-start"
                                     style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 8px; font-size: 0.9rem;">
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <label style="color: var(--text-secondary); font-size: 0.9rem;">A:</label>
+                                <span style="color: var(--text-secondary);">-</span>
                                 <input type="date" id="platforms-date-end"
                                     style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 8px; font-size: 0.9rem;">
                             </div>
-                            <button id="platforms-apply-filter" class="btn-success" style="padding: 0.5rem 1rem;">
-                                <i class="fa-solid fa-filter"></i>
-                                <span>Applica</span>
-                            </button>
                         </div>
                     </div>
                 </div>

@@ -1,0 +1,330 @@
+/* ===================================
+   ANALYTICS - MOBILE OPTIMIZATIONS
+   =================================== */
+
+/* ===== PLATFORMS CAROUSEL (MOBILE) ===== */
+.platforms-carousel-wrapper {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+}
+
+.platforms-carousel {
+    display: flex;
+    transition: transform 0.3s ease;
+    width: 100%;
+}
+
+.carousel-slide {
+    min-width: 100%;
+    flex-shrink: 0;
+}
+
+.carousel-slide-title {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.platforms-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.platform-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    transition: all 0.3s ease;
+}
+
+.platform-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
+}
+
+.platform-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.products-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.platform-card-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-value.highlight {
+    color: #10b981;
+}
+
+/* Carousel Dots */
+.carousel-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding: 0.5rem 0;
+}
+
+.carousel-dots .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(148, 163, 184, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.carousel-dots .dot.active {
+    background: #10b981;
+    width: 24px;
+    border-radius: 4px;
+}
+
+.carousel-dots .dot:hover {
+    background: rgba(16, 185, 129, 0.5);
+}
+
+/* Desktop: Hide carousel, show table */
+@media (min-width: 769px) {
+    .platforms-carousel-wrapper {
+        display: none;
+    }
+}
+
+/* Mobile Breakpoint */
+@media (max-width: 768px) {
+
+    /* ===== HEADER OPTIMIZATIONS ===== */
+    .page-title h1 {
+        font-size: 1.3rem !important;
+    }
+
+    .page-title .subtitle {
+        font-size: 0.85rem !important;
+    }
+
+    /* Hide text in action buttons, show only icons */
+    .actions .btn-primary span {
+        display: none;
+    }
+
+    .actions .btn-primary {
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+    }
+
+    /* ===== PLATFORM SUMMARY ===== */
+    #platforms-summary {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    /* Hide table on mobile, show carousel */
+    #platforms-summary .table-responsive {
+        display: none;
+    }
+
+    /* ===== CHART CONTROLS ===== */
+    /* Make selects and buttons stack vertically */
+    .glass>div[style*="padding: 1.5rem"]>div[style*="display: flex"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .glass select {
+        width: 100% !important;
+        font-size: 0.95rem !important;
+        padding: 0.7rem !important;
+    }
+
+    /* Chart type buttons container */
+    .glass>div>div>div[style*="margin-left: auto"] {
+        margin-left: 0 !important;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .btn-icon {
+        flex: 1;
+        max-width: 120px;
+        height: 44px;
+        font-size: 1.1rem;
+    }
+
+    /* ===== DISTRIBUTION CHARTS GRID ===== */
+    /* Force single column layout for pie charts */
+    div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    /* ===== TABLES OPTIMIZATION ===== */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sales-table {
+        font-size: 0.85rem;
+        min-width: 600px;
+        /* Ensure horizontal scroll for wide tables */
+    }
+
+    .sales-table th,
+    .sales-table td {
+        padding: 0.6rem 0.4rem !important;
+        white-space: nowrap;
+    }
+
+    .sales-table th:first-child,
+    .sales-table td:first-child {
+        position: sticky;
+        left: 0;
+        background: var(--bg-card);
+        z-index: 1;
+    }
+
+    /* Top Products Table - Compact view */
+    #top-products-body td:nth-child(1) {
+        font-weight: 600;
+        color: #10b981;
+    }
+
+    /* ===== PLATFORM FILTER ===== */
+    #platform-filter {
+        font-size: 0.95rem !important;
+        padding: 0.7rem !important;
+    }
+
+    /* ===== GLASS CARDS SPACING ===== */
+    .glass {
+        margin-bottom: 1.5rem !important;
+    }
+
+    .glass h3 {
+        font-size: 1.1rem !important;
+    }
+
+    /* ===== CANVAS CHARTS ===== */
+    canvas {
+        max-height: 300px !important;
+    }
+
+    /* Pie/Doughnut charts specific */
+    #revenueDistChart,
+    #salesDistChart {
+        max-height: 280px !important;
+        margin: 0 auto;
+    }
+
+    /* Chart containers padding */
+    .glass>div[style*="padding: 1.5rem"] {
+        padding: 1rem !important;
+    }
+
+    /* ===== TOUCH IMPROVEMENTS ===== */
+    select,
+    button,
+    .btn-icon {
+        -webkit-tap-highlight-color: rgba(16, 185, 129, 0.2);
+        touch-action: manipulation;
+    }
+
+    /* Larger touch targets */
+    select:focus,
+    button:focus {
+        outline: 2px solid rgba(16, 185, 129, 0.5);
+        outline-offset: 2px;
+    }
+}
+
+/* Extra Small Devices (< 480px) */
+@media (max-width: 480px) {
+
+    .page-title h1 {
+        font-size: 1.1rem !important;
+    }
+
+    .glass {
+        padding: 1rem !important;
+    }
+
+    .glass h3 {
+        font-size: 1rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    .sales-table {
+        font-size: 0.8rem;
+    }
+
+    .sales-table th,
+    .sales-table td {
+        padding: 0.5rem 0.3rem !important;
+    }
+
+    canvas {
+        max-height: 250px !important;
+    }
+
+    /* Stack chart controls more compactly */
+    .glass select {
+        padding: 0.6rem !important;
+        font-size: 0.9rem !important;
+    }
+}
+
+/* Landscape Mobile Optimization */
+@media (max-width: 768px) and (orientation: landscape) {
+    canvas {
+        max-height: 200px !important;
+    }
+
+    .glass {
+        margin-bottom: 1rem !important;
+    }
+}
