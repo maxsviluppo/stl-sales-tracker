@@ -1,357 +1,232 @@
-// Advanced Analytics with Charts and Comparisons
+// Analytics Advanced - STL Sales Tracker
+let revenueChart = null;
+let platformChart = null;
 
-let comparisonChart = null;
-let revenueDistChart = null;
-let salesDistChart = null;
-let currentChartType = 'line';
-
-// Platform colors
-const platformColors = {
-    'Cults3D': '#6366f1',
-    'Pixup': '#10b981',
-    'CGTrader': '#f59e0b',
-    '3DExport': '#ec4899'
-};
-
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadAllAnalytics();
-    setupEventListeners();
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    initializePeriodFilter();
+    loadAnalytics();
 });
 
-async function loadAllAnalytics() {
+// Period Filter Handler
+function initializePeriodFilter() {
+    const periodFilter = document.getElementById('period-filter');
+    const customDateRange = document.getElementById('custom-date-range');
+    const dateFrom = document.getElementById('date-from');
+    const dateTo = document.getElementById('date-to');
+
+    // Set default dates
+    const today = new Date().toISOString().split('T')[0];
+    dateFrom.value = today;
+    dateTo.value = today;
+
+    periodFilter.addEventListener('change', (e) => {
+        if (e.target.value === 'custom') {
+            customDateRange.style.display = 'flex';
+        } else {
+            customDateRange.style.display = 'none';
+            loadAnalytics();
+        }
+    });
+
+    dateFrom.addEventListener('change', () => {
+        if (periodFilter.value === 'custom') loadAnalytics();
+    });
+
+    dateTo.addEventListener('change', () => {
+        if (periodFilter.value === 'custom') loadAnalytics();
+    });
+}
+
+// Get Date Range based on selected period
+function getDateRange() {
+    const period = document.getElementById('period-filter').value;
+    const now = new Date();
+    let startDate, endDate;
+
+    switch (period) {
+        case 'today':
+            startDate = new Date(now.setHours(0, 0, 0, 0));
+            endDate = new Date(now.setHours(23, 59, 59, 999));
+            break;
+        case 'yesterday':
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            startDate = new Date(yesterday.setHours(0, 0, 0, 0));
+            endDate = new Date(yesterday.setHours(23, 59, 59, 999));
+            break;
+        case '7days':
+            endDate = new Date();
+            startDate = new Date();
+            startDate.setDate(startDate.getDate() - 7);
+            break;
+        case '30days':
+            endDate = new Date();
+            startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+            break;
+        case 'month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+            break;
+        case 'year':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+            break;
+        case 'custom':
+            startDate = new Date(document.getElementById('date-from').value);
+            endDate = new Date(document.getElementById('date-to').value);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        default:
+            startDate = new Date(now.setHours(0, 0, 0, 0));
+            endDate = new Date(now.setHours(23, 59, 59, 999));
+    }
+
+    return { startDate, endDate };
+}
+
+// Load Analytics Data
+async function loadAnalytics() {
     try {
-        await loadPlatformsSummary();
-        await loadComparisonChart();
-        await loadDistributionCharts();
-        await loadTopProducts();
-        await loadProductsByPlatform();
-        await populatePlatformFilter();
+        const { startDate, endDate } = getDateRange();
+
+        // Fetch sales data
+        const { data: sales, error } = await supabase
+            .from('sales')
+            .select(`
+                *,
+                platforms (name)
+            `)
+            .gte('sale_date', startDate.toISOString())
+            .lte('sale_date', endDate.toISOString())
+            .order('sale_date', { ascending: true });
+
+        if (error) throw error;
+
+        // Calculate metrics
+        updateKPIs(sales);
+        updateCharts(sales);
+        updateTopProducts(sales);
+
     } catch (error) {
         console.error('Error loading analytics:', error);
     }
 }
 
-async function loadPlatformsSummary() {
-    const { data, error } = await supabase
-        .from('platform_performance_summary')
-        .select('*')
-        .order('total_revenue', { ascending: false });
+// Update KPI Cards
+function updateKPIs(sales) {
+    // Total Revenue
+    const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.amount || 0), 0);
+    document.getElementById('total-revenue').textContent = `€${totalRevenue.toFixed(2)}`;
 
-    if (error) {
-        console.error('Error:', error);
-        return;
+    // Total Sales
+    document.getElementById('total-sales').textContent = sales.length;
+
+    // Average Order Value
+    const avgValue = sales.length > 0 ? totalRevenue / sales.length : 0;
+    document.getElementById('avg-value').textContent = `€${avgValue.toFixed(2)}`;
+
+    // Best Platform
+    const platformRevenue = {};
+    sales.forEach(sale => {
+        const platform = sale.platforms?.name || 'Unknown';
+        platformRevenue[platform] = (platformRevenue[platform] || 0) + parseFloat(sale.amount || 0);
+    });
+
+    const bestPlatform = Object.entries(platformRevenue).sort((a, b) => b[1] - a[1])[0];
+    if (bestPlatform) {
+        document.getElementById('best-platform').textContent = bestPlatform[0];
+        document.getElementById('platform-revenue').textContent = `€${bestPlatform[1].toFixed(2)}`;
+    } else {
+        document.getElementById('best-platform').textContent = '-';
+        document.getElementById('platform-revenue').textContent = '€0.00';
     }
 
-    const container = document.getElementById('platforms-summary');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    // Prepare data for all platforms
-    const platformsData = [];
-
-    for (const platform of data) {
-        // Get daily stats
-        const { data: dailyData } = await supabase
-            .from('platform_stats_daily')
-            .select('*')
-            .eq('platform_id', platform.id)
-            .eq('sale_day', new Date().toISOString().split('T')[0])
-            .maybeSingle();
-
-        // Get monthly stats
-        const { data: monthlyData } = await supabase
-            .from('platform_stats_monthly')
-            .select('*')
-            .eq('platform_id', platform.id)
-            .gte('month', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
-            .maybeSingle();
-
-        // Get yearly stats
-        const { data: yearlyData } = await supabase
-            .from('platform_stats_yearly')
-            .select('*')
-            .eq('platform_id', platform.id)
-            .gte('year', new Date(new Date().getFullYear(), 0, 1).toISOString())
-            .maybeSingle();
-
-        const color = platformColors[platform.name] || '#6366f1';
-
-        platformsData.push({
-            name: platform.name,
-            color: color,
-            uniqueProducts: platform.unique_products || 0,
-            daily: {
-                sales: dailyData?.total_sales || 0,
-                revenue: dailyData?.total_amount || 0
-            },
-            monthly: {
-                sales: monthlyData?.total_sales || 0,
-                revenue: monthlyData?.total_amount || 0
-            },
-            yearly: {
-                sales: yearlyData?.total_sales || 0,
-                revenue: yearlyData?.total_amount || 0
-            }
-        });
-    }
-
-    // Create carousel structure
-    let html = `
-        <div class="platforms-carousel-wrapper">
-            <div class="platforms-carousel" id="platforms-carousel">
-                <!-- Daily Slide -->
-                <div class="carousel-slide active">
-                    <h4 class="carousel-slide-title">Giornaliero</h4>
-                    <div class="platforms-cards">
-                        ${platformsData.map(p => `
-                            <div class="platform-card">
-                                <div class="platform-card-header">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${p.color};"></div>
-                                        <strong>${p.name}</strong>
-                                    </div>
-                                </div>
-                                <div class="platform-card-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-label">Vendite</span>
-                                        <span class="stat-value">${p.daily.sales}</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Ricavo</span>
-                                        <span class="stat-value highlight">€${p.daily.revenue.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                <!-- Monthly Slide -->
-                <div class="carousel-slide">
-                    <h4 class="carousel-slide-title">Mensile</h4>
-                    <div class="platforms-cards">
-                        ${platformsData.map(p => `
-                            <div class="platform-card">
-                                <div class="platform-card-header">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${p.color};"></div>
-                                        <strong>${p.name}</strong>
-                                    </div>
-                                </div>
-                                <div class="platform-card-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-label">Vendite</span>
-                                        <span class="stat-value">${p.monthly.sales}</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Ricavo</span>
-                                        <span class="stat-value highlight">€${p.monthly.revenue.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                <!-- Yearly Slide -->
-                <div class="carousel-slide">
-                    <h4 class="carousel-slide-title">Annuale</h4>
-                    <div class="platforms-cards">
-                        ${platformsData.map(p => `
-                            <div class="platform-card">
-                                <div class="platform-card-header">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${p.color};"></div>
-                                        <strong>${p.name}</strong>
-                                    </div>
-                                    <span class="products-badge">${p.uniqueProducts} prodotti</span>
-                                </div>
-                                <div class="platform-card-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-label">Vendite</span>
-                                        <span class="stat-value">${p.yearly.sales}</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Ricavo</span>
-                                        <span class="stat-value highlight">€${p.yearly.revenue.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Carousel Dots -->
-            <div class="carousel-dots">
-                <span class="dot active" data-slide="0"></span>
-                <span class="dot" data-slide="1"></span>
-                <span class="dot" data-slide="2"></span>
-            </div>
-        </div>
-    `;
-
-    container.innerHTML = html;
-
-    // Initialize carousel
-    initPlatformsCarousel();
+    // Calculate changes (placeholder - you can implement comparison logic)
+    document.getElementById('revenue-change').textContent = '+0%';
+    document.getElementById('sales-change').textContent = '+0%';
+    document.getElementById('avg-change').textContent = '+0%';
 }
 
-async function loadComparisonChart() {
-    const metric = document.getElementById('chart-metric')?.value || 'revenue';
-    const days = parseInt(document.getElementById('chart-timeframe')?.value || '30');
+// Update Charts
+function updateCharts(sales) {
+    updateRevenueChart(sales);
+    updatePlatformChart(sales);
+}
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-
-    const { data: platforms } = await supabase.from('platforms').select('*');
-    if (!platforms) return;
-
-    const datasets = [];
-
-    for (const platform of platforms) {
-        const { data } = await supabase
-            .from('platform_stats_daily')
-            .select('*')
-            .eq('platform_id', platform.id)
-            .gte('sale_day', startDate.toISOString().split('T')[0])
-            .order('sale_day', { ascending: true });
-
-        if (!data || data.length === 0) continue;
-
-        const values = data.map(d => {
-            if (metric === 'revenue') return parseFloat(d.total_amount);
-            if (metric === 'sales') return d.total_sales;
-            if (metric === 'avg') return parseFloat(d.avg_amount);
-            return 0;
-        });
-
-        datasets.push({
-            label: platform.name,
-            data: values,
-            borderColor: platformColors[platform.name] || '#6366f1',
-            backgroundColor: (platformColors[platform.name] || '#6366f1') + '20',
-            tension: 0.4,
-            fill: currentChartType === 'line'
-        });
-    }
-
-    const labels = datasets[0]?.data.map((_, i) => {
-        const date = new Date(startDate);
-        date.setDate(date.getDate() + i);
-        return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
-    }) || [];
-
-    const ctx = document.getElementById('comparisonChart');
+// Revenue Trend Chart
+function updateRevenueChart(sales) {
+    const ctx = document.getElementById('revenue-chart');
     if (!ctx) return;
 
-    if (comparisonChart) {
-        comparisonChart.destroy();
-    }
+    // Group sales by date
+    const dailyRevenue = {};
+    sales.forEach(sale => {
+        const date = new Date(sale.sale_date).toLocaleDateString('it-IT');
+        dailyRevenue[date] = (dailyRevenue[date] || 0) + parseFloat(sale.amount || 0);
+    });
 
-    comparisonChart = new Chart(ctx, {
-        type: currentChartType,
-        data: { labels, datasets },
+    const labels = Object.keys(dailyRevenue);
+    const data = Object.values(dailyRevenue);
+
+    if (revenueChart) revenueChart.destroy();
+
+    revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Ricavi (€)',
+                data: data,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#10b981',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: window.innerWidth < 768 ? 1.2 : 2,
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
-            animation: {
-                duration: 800,
-                easing: 'easeInOutQuart'
-            },
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: true,
-                    position: window.innerWidth < 768 ? 'top' : 'top',
-                    labels: {
-                        color: '#f8fafc',
-                        padding: 15,
-                        font: {
-                            size: 12,
-                            weight: '500'
-                        },
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        boxWidth: 8,
-                        boxHeight: 8
-                    }
+                    display: false
                 },
                 tooltip: {
-                    enabled: true,
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    titleColor: '#10b981',
-                    titleFont: {
-                        size: 13,
-                        weight: 'bold'
-                    },
-                    bodyColor: '#f8fafc',
-                    bodyFont: {
-                        size: 12
-                    },
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    titleColor: '#fff',
+                    bodyColor: '#10b981',
                     borderColor: '#10b981',
                     borderWidth: 1,
                     padding: 12,
-                    displayColors: true,
+                    displayColors: false,
                     callbacks: {
-                        label: function (context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                const metric = document.getElementById('chart-metric')?.value || 'revenue';
-                                if (metric === 'revenue' || metric === 'avg') {
-                                    label += '€' + context.parsed.y.toFixed(2);
-                                } else {
-                                    label += context.parsed.y;
-                                }
-                            }
-                            return label;
-                        }
+                        label: (context) => `€${context.parsed.y.toFixed(2)}`
                     }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)'
+                    },
                     ticks: {
                         color: '#94a3b8',
-                        font: {
-                            size: 11
-                        },
-                        callback: function (value) {
-                            const metric = document.getElementById('chart-metric')?.value || 'revenue';
-                            if (metric === 'revenue' || metric === 'avg') {
-                                return '€' + value.toFixed(0);
-                            }
-                            return value;
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(51, 65, 85, 0.5)',
-                        drawBorder: false
+                        callback: (value) => `€${value}`
                     }
                 },
                 x: {
-                    ticks: {
-                        color: '#94a3b8',
-                        font: {
-                            size: 10
-                        },
-                        maxRotation: 45,
-                        minRotation: 0
-                    },
                     grid: {
-                        color: 'rgba(51, 65, 85, 0.3)',
-                        drawBorder: false
+                        display: false
+                    },
+                    ticks: {
+                        color: '#94a3b8'
                     }
                 }
             }
@@ -359,387 +234,144 @@ async function loadComparisonChart() {
     });
 }
 
-async function loadDistributionCharts() {
-    const { data } = await supabase
-        .from('platform_performance_summary')
-        .select('*')
-        .order('total_revenue', { ascending: false });
+// Platform Sales Chart
+function updatePlatformChart(sales) {
+    const ctx = document.getElementById('platform-chart');
+    if (!ctx) return;
 
-    if (!data) return;
+    // Group sales by platform
+    const platformSales = {};
+    sales.forEach(sale => {
+        const platform = sale.platforms?.name || 'Unknown';
+        platformSales[platform] = (platformSales[platform] || 0) + 1;
+    });
 
-    const labels = data.map(p => p.name);
-    const revenues = data.map(p => parseFloat(p.total_revenue || 0));
-    const sales = data.map(p => p.total_sales || 0);
-    const colors = labels.map(name => platformColors[name] || '#6366f1');
+    const labels = Object.keys(platformSales);
+    const data = Object.values(platformSales);
 
-    // Revenue Distribution
-    const revenueCtx = document.getElementById('revenueDistChart');
-    if (revenueCtx) {
-        if (revenueDistChart) revenueDistChart.destroy();
-        revenueDistChart = new Chart(revenueCtx, {
-            type: 'doughnut',
-            data: {
-                labels,
-                datasets: [{
-                    data: revenues,
-                    backgroundColor: colors,
-                    borderWidth: 3,
-                    borderColor: '#0f172a',
-                    hoverBorderWidth: 4,
-                    hoverBorderColor: '#10b981',
-                    hoverOffset: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: window.innerWidth < 768 ? 1 : 1.8,
-                animation: {
-                    animateRotate: true,
-                    animateScale: true,
-                    duration: 1000,
-                    easing: 'easeInOutQuart'
+    // Platform colors
+    const colors = {
+        'Cults3D': '#3b82f6',
+        'Pixup': '#10b981',
+        'CGTrader': '#f59e0b',
+        '3DExport': '#8b5cf6',
+        'Unknown': '#6b7280'
+    };
+
+    const backgroundColors = labels.map(label => colors[label] || '#6b7280');
+
+    if (platformChart) platformChart.destroy();
+
+    platformChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Vendite',
+                data: data,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: backgroundColors,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
                 },
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            color: '#f8fafc',
-                            padding: 12,
-                            font: {
-                                size: 11
-                            },
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
+                tooltip: {
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    titleColor: '#fff',
+                    bodyColor: '#3b82f6',
+                    borderColor: '#3b82f6',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        label: (context) => `${context.parsed.y} vendite`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)'
                     },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        titleColor: '#10b981',
-                        bodyColor: '#f8fafc',
-                        borderColor: '#10b981',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: true,
-                        callbacks: {
-                            label: (context) => {
-                                const label = context.label || '';
-                                const value = context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `${label}: €${value.toFixed(2)} (${percentage}%)`;
-                            }
-                        }
+                    ticks: {
+                        color: '#94a3b8',
+                        stepSize: 1
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#94a3b8'
                     }
                 }
             }
-        });
-    }
-
-    // Sales Distribution
-    const salesCtx = document.getElementById('salesDistChart');
-    if (salesCtx) {
-        if (salesDistChart) salesDistChart.destroy();
-        salesDistChart = new Chart(salesCtx, {
-            type: 'doughnut',
-            data: {
-                labels,
-                datasets: [{
-                    data: sales,
-                    backgroundColor: colors,
-                    borderWidth: 3,
-                    borderColor: '#0f172a',
-                    hoverBorderWidth: 4,
-                    hoverBorderColor: '#10b981',
-                    hoverOffset: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: window.innerWidth < 768 ? 1 : 1.8,
-                animation: {
-                    animateRotate: true,
-                    animateScale: true,
-                    duration: 1000,
-                    easing: 'easeInOutQuart'
-                },
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            color: '#f8fafc',
-                            padding: 12,
-                            font: {
-                                size: 11
-                            },
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        titleColor: '#10b981',
-                        bodyColor: '#f8fafc',
-                        borderColor: '#10b981',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: true,
-                        callbacks: {
-                            label: (context) => {
-                                const label = context.label || '';
-                                const value = context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `${label}: ${value} vendite (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
+        }
+    });
 }
 
-async function loadTopProducts() {
-    const { data, error } = await supabase
-        .from('top_products_overall')
-        .select('*')
-        .limit(20);
-
-    if (error) {
-        console.error('Error:', error);
-        return;
-    }
-
+// Update Top Products Table
+function updateTopProducts(sales) {
     const tbody = document.getElementById('top-products-body');
     if (!tbody) return;
 
-    tbody.innerHTML = '';
+    // Group by product
+    const productStats = {};
+    sales.forEach(sale => {
+        const product = sale.product_name || 'Unknown';
+        if (!productStats[product]) {
+            productStats[product] = {
+                name: product,
+                platform: sale.platforms?.name || 'Unknown',
+                count: 0,
+                revenue: 0
+            };
+        }
+        productStats[product].count++;
+        productStats[product].revenue += parseFloat(sale.amount || 0);
+    });
 
-    if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">Nessun prodotto trovato</td></tr>';
-        return;
-    }
+    // Sort by revenue
+    const topProducts = Object.values(productStats)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10);
 
-    data.forEach((product, index) => {
-        const row = `
+    if (topProducts.length === 0) {
+        tbody.innerHTML = `
             <tr>
-                <td>
-                    <span style="background: ${index < 3 ? 'var(--accent-color)' : '#334155'}; color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 600;">
-                        ${index + 1}
-                    </span>
+                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    Nessun dato disponibile per il periodo selezionato
                 </td>
-                <td><strong>${product.product_name}</strong></td>
-                <td>${product.total_sales}</td>
-                <td style="color: var(--accent-color); font-weight: 600;">€${product.total_revenue.toFixed(2)}</td>
-                <td>€${product.avg_price.toFixed(2)}</td>
-                <td><span style="font-size: 0.875rem; color: #94a3b8;">${product.platforms || 'N/A'}</span></td>
             </tr>
         `;
-        tbody.innerHTML += row;
-    });
-}
-
-async function loadProductsByPlatform(platformId = null) {
-    let query = supabase
-        .from('product_performance')
-        .select('*')
-        .order('total_revenue', { ascending: false });
-
-    if (platformId) {
-        const { data: platform } = await supabase
-            .from('platforms')
-            .select('name')
-            .eq('id', platformId)
-            .single();
-
-        if (platform) {
-            query = query.eq('platform_name', platform.name);
-        }
-    }
-
-    const { data, error } = await query.limit(100);
-
-    if (error) {
-        console.error('Error:', error);
         return;
     }
 
-    const tbody = document.getElementById('products-by-platform-body');
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-
-    if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #94a3b8;">Nessun prodotto trovato</td></tr>';
-        return;
-    }
-
-    data.forEach(product => {
-        const firstSale = new Date(product.first_sale).toLocaleDateString('it-IT');
-        const lastSale = new Date(product.last_sale).toLocaleDateString('it-IT');
-        const color = platformColors[product.platform_name] || '#6366f1';
-
-        const row = `
-            <tr>
-                <td>${product.product_name}</td>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background: ${color};"></div>
-                        <span class="status-badge status-completed">${product.platform_name}</span>
-                    </div>
-                </td>
-                <td>${product.times_sold}</td>
-                <td style="color: var(--accent-color); font-weight: 600;">€${product.total_revenue.toFixed(2)}</td>
-                <td>€${product.avg_price.toFixed(2)}</td>
-                <td style="font-size: 0.875rem; color: #94a3b8;">${firstSale}</td>
-                <td style="font-size: 0.875rem; color: #94a3b8;">${lastSale}</td>
-            </tr>
-        `;
-        tbody.innerHTML += row;
-    });
-}
-
-async function populatePlatformFilter() {
-    const { data } = await supabase.from('platforms').select('*').order('name');
-    const filter = document.getElementById('platform-filter');
-    if (!filter || !data) return;
-
-    filter.innerHTML = '<option value="">Tutte le piattaforme</option>';
-    data.forEach(p => {
-        filter.innerHTML += `<option value="${p.id}">${p.name}</option>`;
-    });
-}
-
-function setupEventListeners() {
-    // Chart controls
-    const metricSelect = document.getElementById('chart-metric');
-    const timeframeSelect = document.getElementById('chart-timeframe');
-    const lineBtn = document.getElementById('chart-type-line');
-    const barBtn = document.getElementById('chart-type-bar');
-
-    if (metricSelect) {
-        metricSelect.addEventListener('change', loadComparisonChart);
-    }
-
-    if (timeframeSelect) {
-        timeframeSelect.addEventListener('change', loadComparisonChart);
-    }
-
-    if (lineBtn) {
-        lineBtn.addEventListener('click', () => {
-            currentChartType = 'line';
-            lineBtn.style.color = 'var(--accent-color)';
-            if (barBtn) barBtn.style.color = '';
-            loadComparisonChart();
-        });
-    }
-
-    if (barBtn) {
-        barBtn.addEventListener('click', () => {
-            currentChartType = 'bar';
-            barBtn.style.color = 'var(--accent-color)';
-            if (lineBtn) lineBtn.style.color = '';
-            loadComparisonChart();
-        });
-    }
-
-    // Platform filter
-    const platformFilter = document.getElementById('platform-filter');
-    if (platformFilter) {
-        platformFilter.addEventListener('change', (e) => {
-            loadProductsByPlatform(e.target.value || null);
-        });
-    }
-
-    // Refresh button
-    const refreshBtn = document.getElementById('refresh-analytics-btn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', async () => {
-            const icon = refreshBtn.querySelector('i');
-            icon.classList.add('fa-spin');
-            await loadAllAnalytics();
-            setTimeout(() => icon.classList.remove('fa-spin'), 1000);
-        });
-    }
-}
-
-// Platforms Carousel Logic
-function initPlatformsCarousel() {
-    const carousel = document.getElementById('platforms-carousel');
-    const slides = carousel?.querySelectorAll('.carousel-slide');
-    const dots = document.querySelectorAll('.carousel-dots .dot');
-
-    if (!carousel || !slides || slides.length === 0) return;
-
-    let currentSlide = 0;
-    let startX = 0;
-    let isDragging = false;
-
-    // Go to specific slide
-    function goToSlide(index) {
-        if (index < 0 || index >= slides.length) return;
-
-        // Update dots
-        dots.forEach((dot, i) => {
-            dot.classList.toggle('active', i === index);
-        });
-
-        currentSlide = index;
-
-        // Translate carousel
-        carousel.style.transform = `translateX(-${index * 100}%)`;
-    }
-
-    // Touch/Mouse events for swipe
-    function handleStart(e) {
-        startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
-        isDragging = true;
-        carousel.style.transition = 'none';
-    }
-
-    function handleMove(e) {
-        if (!isDragging) return;
-
-        const currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
-        const diff = startX - currentX;
-        const threshold = 50; // Minimum swipe distance
-
-        if (Math.abs(diff) > threshold) {
-            if (diff > 0 && currentSlide < slides.length - 1) {
-                // Swipe left - next slide
-                goToSlide(currentSlide + 1);
-                isDragging = false;
-            } else if (diff < 0 && currentSlide > 0) {
-                // Swipe right - previous slide
-                goToSlide(currentSlide - 1);
-                isDragging = false;
-            }
-        }
-    }
-
-    function handleEnd() {
-        isDragging = false;
-        carousel.style.transition = 'transform 0.3s ease';
-    }
-
-    // Add event listeners
-    carousel.addEventListener('touchstart', handleStart, { passive: true });
-    carousel.addEventListener('touchmove', handleMove, { passive: true });
-    carousel.addEventListener('touchend', handleEnd);
-
-    carousel.addEventListener('mousedown', handleStart);
-    carousel.addEventListener('mousemove', handleMove);
-    carousel.addEventListener('mouseup', handleEnd);
-    carousel.addEventListener('mouseleave', handleEnd);
-
-    // Dots navigation
-    dots.forEach((dot, index) => {
-        dot.addEventListener('click', () => goToSlide(index));
-    });
-
-    // Initialize first slide
-    carousel.style.transition = 'transform 0.3s ease';
-    goToSlide(0);
+    tbody.innerHTML = topProducts.map((product, index) => `
+        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+            <td style="padding: 1rem; color: var(--text-secondary);">${index + 1}</td>
+            <td style="padding: 1rem; color: var(--text-primary); font-weight: 500;">${product.name}</td>
+            <td style="padding: 1rem; text-align: center;">
+                <span style="padding: 0.25rem 0.75rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 6px; font-size: 0.875rem;">
+                    ${product.platform}
+                </span>
+            </td>
+            <td style="padding: 1rem; text-align: center; color: var(--text-primary); font-weight: 600;">${product.count}</td>
+            <td style="padding: 1rem; text-align: right; color: #10b981; font-weight: 700;">€${product.revenue.toFixed(2)}</td>
+        </tr>
+    `).join('');
 }
