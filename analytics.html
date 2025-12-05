@@ -64,10 +64,10 @@
                     </div>
                 </div>
                 <div class="actions">
-                    <a href="index.html" class="btn-secondary"
-                        style="display: flex; align-items: center; gap: 0.5rem; text-decoration: none;">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        <span>Esci</span>
+                    <a href="index.html"
+                        style="width: 40px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.2s; text-decoration: none;"
+                        title="Chiudi Analytics">
+                        <i class="fa-solid fa-xmark" style="font-size: 1.25rem;"></i>
                     </a>
                 </div>
             </header>
@@ -103,7 +103,6 @@
             <!-- KPI Cards -->
             <div style="padding: 1.5rem 2rem;">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-                    <!-- Total Revenue -->
                     <div class="glass" style="padding: 1.5rem;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
@@ -118,15 +117,8 @@
                                 <i class="fa-solid fa-euro-sign" style="color: #10b981; font-size: 1.5rem;"></i>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span id="revenue-change"
-                                style="color: #10b981; font-size: 0.875rem; font-weight: 600;">+0%</span>
-                            <span style="color: var(--text-secondary); font-size: 0.875rem;">vs periodo
-                                precedente</span>
-                        </div>
                     </div>
 
-                    <!-- Total Sales -->
                     <div class="glass" style="padding: 1.5rem;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
@@ -141,15 +133,8 @@
                                 <i class="fa-solid fa-cart-shopping" style="color: #3b82f6; font-size: 1.5rem;"></i>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span id="sales-change"
-                                style="color: #10b981; font-size: 0.875rem; font-weight: 600;">+0%</span>
-                            <span style="color: var(--text-secondary); font-size: 0.875rem;">vs periodo
-                                precedente</span>
-                        </div>
                     </div>
 
-                    <!-- Average Order Value -->
                     <div class="glass" style="padding: 1.5rem;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
@@ -164,15 +149,8 @@
                                 <i class="fa-solid fa-chart-simple" style="color: #f59e0b; font-size: 1.5rem;"></i>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span id="avg-change"
-                                style="color: #10b981; font-size: 0.875rem; font-weight: 600;">+0%</span>
-                            <span style="color: var(--text-secondary); font-size: 0.875rem;">vs periodo
-                                precedente</span>
-                        </div>
                     </div>
 
-                    <!-- Best Platform -->
                     <div class="glass" style="padding: 1.5rem;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
@@ -187,40 +165,71 @@
                                 <i class="fa-solid fa-trophy" style="color: #8b5cf6; font-size: 1.5rem;"></i>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span id="platform-revenue"
-                                style="color: #8b5cf6; font-size: 0.875rem; font-weight: 600;">€0.00</span>
-                            <span style="color: var(--text-secondary); font-size: 0.875rem;">di ricavi</span>
-                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Charts Section -->
-            <div style="padding: 0 2rem 2rem 2rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                    <!-- Revenue Trend Chart -->
-                    <div class="glass" style="padding: 1.5rem;">
-                        <h3
-                            style="color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <!-- Chart Slider -->
+            <div style="padding: 0 2rem 1.5rem 2rem;">
+                <div class="glass" style="padding: 1.5rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 id="chart-title"
+                            style="color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
                             <i class="fa-solid fa-chart-line" style="color: #10b981;"></i>
                             Trend Ricavi
                         </h3>
-                        <canvas id="revenue-chart" style="max-height: 300px;"></canvas>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="prev-chart"
+                                style="width: 36px; height: 36px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.2s;">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <button id="next-chart"
+                                style="width: 36px; height: 36px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.2s;">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
-
-                    <!-- Sales by Platform Chart -->
-                    <div class="glass" style="padding: 1.5rem;">
-                        <h3
-                            style="color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fa-solid fa-layer-group" style="color: #3b82f6;"></i>
-                            Vendite per Piattaforma
-                        </h3>
-                        <canvas id="platform-chart" style="max-height: 300px;"></canvas>
+                    <div style="position: relative; height: 350px;">
+                        <canvas id="main-chart"></canvas>
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem;">
+                        <span class="chart-indicator active" data-chart="0"
+                            style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; cursor: pointer; transition: all 0.3s;"></span>
+                        <span class="chart-indicator" data-chart="1"
+                            style="width: 8px; height: 8px; background: rgba(255,255,255,0.2); border-radius: 50%; cursor: pointer; transition: all 0.3s;"></span>
                     </div>
                 </div>
+            </div>
 
-                <!-- Top Products Table -->
+            <!-- Platform Metrics Slider -->
+            <div style="padding: 0 2rem 1.5rem 2rem;">
+                <div class="glass" style="padding: 1.5rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-layer-group" style="color: #8b5cf6;"></i>
+                            Metriche Piattaforme
+                        </h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="prev-platform"
+                                style="width: 36px; height: 36px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.2s;">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <button id="next-platform"
+                                style="width: 36px; height: 36px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.2s;">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="platform-metrics-container" style="min-height: 200px;"></div>
+                    <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem;"
+                        id="platform-indicators"></div>
+                </div>
+            </div>
+
+            <!-- Top Products Table -->
+            <div style="padding: 0 2rem 2rem 2rem;">
                 <div class="glass" style="padding: 1.5rem;">
                     <h3
                         style="color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -228,29 +237,23 @@
                         Prodotti Più Venduti
                     </h3>
                     <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
+                        <table style="width: 100%; max-width: 700px; border-collapse: collapse;">
                             <thead>
                                 <tr style="border-bottom: 1px solid var(--border-color);">
                                     <th
-                                        style="text-align: left; padding: 0.75rem; color: var(--text-secondary); font-weight: 600;">
+                                        style="text-align: left; padding: 0.75rem; color: var(--text-secondary); font-weight: 600; width: 50px;">
                                         #</th>
                                     <th
                                         style="text-align: left; padding: 0.75rem; color: var(--text-secondary); font-weight: 600;">
                                         Prodotto</th>
                                     <th
-                                        style="text-align: center; padding: 0.75rem; color: var(--text-secondary); font-weight: 600;">
+                                        style="text-align: center; padding: 0.75rem; color: var(--text-secondary); font-weight: 600; width: 150px;">
                                         Piattaforma</th>
-                                    <th
-                                        style="text-align: center; padding: 0.75rem; color: var(--text-secondary); font-weight: 600;">
-                                        Vendite</th>
-                                    <th
-                                        style="text-align: right; padding: 0.75rem; color: var(--text-secondary); font-weight: 600;">
-                                        Ricavi</th>
                                 </tr>
                             </thead>
                             <tbody id="top-products-body">
                                 <tr>
-                                    <td colspan="5"
+                                    <td colspan="3"
                                         style="text-align: center; padding: 2rem; color: var(--text-secondary);">
                                         Nessun dato disponibile per il periodo selezionato
                                     </td>
