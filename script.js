@@ -11,6 +11,19 @@ let salesChart = null;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('STL Sales Tracker Initialized');
 
+    // Wait for Supabase client to be ready
+    let retries = 0;
+    const maxRetries = 20; // 2 seconds max wait
+    while (retries < maxRetries && (!window.supabase || typeof window.supabase.from !== 'function')) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+    }
+
+    if (!window.supabase || typeof window.supabase.from !== 'function') {
+        console.error('❌ Supabase client not initialized after waiting');
+        return;
+    }
+
     // Initialize UI Components
     setupNavigation();
     setupSound();
@@ -21,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     requestNotificationPermission();
     setupMobileHeader(); // Add Settings Button
     setupHistoryView(); // Initialize History View Listeners
+    setupBackupRestore(); // Initialize Backup & Restore
 
     // Initial Data Load
     await loadDashboardData();
