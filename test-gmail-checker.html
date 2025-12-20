@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Gmail Checker - Pixup Debug</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .log-container {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .log-line {
+            color: #e2e8f0;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .log-line.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+
+        .log-line.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .log-line.warning {
+            background: rgba(251, 191, 36, 0.1);
+            color: #fbbf24;
+        }
+
+        .log-line.info {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔍 Gmail Checker Debug</h1>
+        <p class="subtitle">Test della funzione gmail-checker per ordini Pixup</p>
+
+        <button id="testBtn" onclick="runTest()">
+            ▶️ Esegui Test
+        </button>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-value" id="emailsFound">0</div>
+                <div class="stat-label">Email Trovate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="salesProcessed">0</div>
+                <div class="stat-label">Vendite Processate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="executionTime">0s</div>
+                <div class="stat-label">Tempo Esecuzione</div>
+            </div>
+        </div>
+
+        <div class="log-container" id="logContainer">
+            <div class="log-line info">Pronto per il test...</div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://zhgpccmzgyertwnvyiaz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpoZ3BjY216Z3llcnR3bnZ5aWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5OTU4NDQsImV4cCI6MjA3OTU3MTg0NH0.A0WxSn-8JKpd4tXTxSxLQIoq3M-654vGpw_guAHpQQc';
+
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const logLine = document.createElement('div');
+            logLine.className = `log-line ${type}`;
+
+            const timestamp = new Date().toLocaleTimeString('it-IT');
+            logLine.textContent = `[${timestamp}] ${message}`;
+
+            logContainer.appendChild(logLine);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        async function runTest() {
+            const btn = document.getElementById('testBtn');
+            const statsDiv = document.getElementById('stats');
+            const logContainer = document.getElementById('logContainer');
+
+            // Reset
+            logContainer.innerHTML = '';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Esecuzione in corso...';
+            statsDiv.style.display = 'none';
+
+            addLog('🚀 Avvio test gmail-checker...', 'info');
+            addLog('📡 Connessione a Supabase...', 'info');
+
+            const startTime = Date.now();
+
+            try {
+                addLog('📨 Invio richiesta alla funzione gmail-checker...', 'info');
+
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/gmail-checker`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const endTime = Date.now();
+                const executionTime = ((endTime - startTime) / 1000).toFixed(2);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                addLog(`✅ Risposta ricevuta in ${executionTime}s`, 'success');
+                addLog('', 'info');
+
+                // Display stats
+                statsDiv.style.display = 'grid';
+                document.getElementById('executionTime').textContent = `${executionTime}s`;
+                document.getElementById('salesProcessed').textContent = result.processed || 0;
+
+                // Process logs
+                if (result.logs && result.logs.length > 0) {
+                    addLog('📋 LOG DETTAGLIATI:', 'info');
+                    addLog('═══════════════════════════════════════', 'info');
+
+                    let emailCount = 0;
+                    result.logs.forEach(log => {
+                        let type = 'info';
+
+                        if (log.includes('✅') || log.includes('INSERTED')) {
+                            type = 'success';
+                        } else if (log.includes('❌') || log.includes('Error')) {
+                            type = 'error';
+                        } else if (log.includes('⚠️') || log.includes('SKIPPED')) {
+                            type = 'warning';
+                        } else if (log.includes('📬 Found')) {
+                            const match = log.match(/Found (\d+) emails/);
+                            if (match) emailCount = parseInt(match[1]);
+                        }
+
+                        addLog(log, type);
+                    });
+
+                    document.getElementById('emailsFound').textContent = emailCount;
+
+                    addLog('═══════════════════════════════════════', 'info');
+                } else {
+                    addLog('⚠️ Nessun log disponibile', 'warning');
+                }
+
+                addLog('', 'info');
+                addLog(`📊 RIEPILOGO: ${result.processed || 0} vendite processate`, result.processed > 0 ? 'success' : 'warning');
+
+                if (result.processed === 0) {
+                    addLog('', 'info');
+                    addLog('💡 POSSIBILI CAUSE:', 'warning');
+                    addLog('   1. Email già processata in precedenza', 'warning');
+                    addLog('   2. Formato email non riconosciuto', 'warning');
+                    addLog('   3. Email non trovata nella ricerca', 'warning');
+                    addLog('   4. Dati incompleti (prezzo o prodotto mancante)', 'warning');
+                }
+
+            } catch (error) {
+                addLog(`❌ ERRORE: ${error.message}`, 'error');
+                console.error('Test error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '▶️ Esegui Test';
+            }
+        }
+    </script>
+</body>
+
+</html>

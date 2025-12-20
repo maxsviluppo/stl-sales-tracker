@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "imap-simple": "npm:imap-simple@5.1.0",
+    "simple-parser": "npm:mailparser@3.6.4",
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@2"
+  }
+}

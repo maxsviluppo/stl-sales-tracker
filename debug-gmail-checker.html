@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Gmail Checker - Debug</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #00d4ff;
+        }
+
+        .config-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .config-section h2 {
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .input-group input::placeholder {
+            color: #888;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.02);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .logs-section {
+            background: #0d1117;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .logs-section h2 {
+            margin-bottom: 15px;
+            color: #58a6ff;
+        }
+
+        #logs {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 15px;
+            background: #161b22;
+            border-radius: 8px;
+        }
+
+        .log-line {
+            padding: 2px 0;
+        }
+
+        .log-success {
+            color: #3fb950;
+        }
+
+        .log-error {
+            color: #f85149;
+        }
+
+        .log-warning {
+            color: #d29922;
+        }
+
+        .log-info {
+            color: #58a6ff;
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: rgba(63, 185, 80, 0.2);
+            color: #3fb950;
+        }
+
+        .status.error {
+            background: rgba(248, 81, 73, 0.2);
+            color: #f85149;
+        }
+
+        .status.loading {
+            background: rgba(88, 166, 255, 0.2);
+            color: #58a6ff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔧 Debug Gmail Checker</h1>
+
+        <div class="config-section">
+            <h2>⚙️ Configurazione Supabase</h2>
+            <div class="input-group">
+                <label>Supabase URL:</label>
+                <input type="text" id="supabaseUrl" placeholder="https://xxxxx.supabase.co" />
+            </div>
+            <div class="input-group">
+                <label>Supabase Anon Key:</label>
+                <input type="text" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+            </div>
+            <button id="testBtn" onclick="testGmailChecker()">🚀 Esegui Test Gmail Checker</button>
+            <button id="checkAccountBtn" onclick="checkEmailAccount()"
+                style="background: linear-gradient(135deg, #ffd700, #ff9500); margin-top: 10px;">
+                📧 Verifica Account Email
+            </button>
+        </div>
+
+        <div id="statusDiv" class="status loading" style="display: none;"></div>
+
+        <div class="logs-section">
+            <h2>📋 Log Output</h2>
+            <div id="logs">In attesa di test...</div>
+        </div>
+    </div>
+
+    <script>
+        // Load saved config
+        document.getElementById('supabaseUrl').value = localStorage.getItem('supabaseUrl') || '';
+        document.getElementById('supabaseKey').value = localStorage.getItem('supabaseKey') || '';
+
+        function formatLog(text) {
+            if (text.includes('✅')) return `<span class="log-success">${text}</span>`;
+            if (text.includes('❌')) return `<span class="log-error">${text}</span>`;
+            if (text.includes('⚠️')) return `<span class="log-warning">${text}</span>`;
+            if (text.includes('📧') || text.includes('📬') || text.includes('🔄')) return `<span class="log-info">${text}</span>`;
+            return text;
+        }
+
+        async function testGmailChecker() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+
+            if (!url || !key) {
+                alert('Inserisci URL e Key di Supabase!');
+                return;
+            }
+
+            // Save config
+            localStorage.setItem('supabaseUrl', url);
+            localStorage.setItem('supabaseKey', key);
+
+            const logsDiv = document.getElementById('logs');
+            const statusDiv = document.getElementById('statusDiv');
+            const btn = document.getElementById('testBtn');
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Esecuzione in corso...';
+            logsDiv.innerHTML = 'Chiamando gmail-checker...\n';
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status loading';
+            statusDiv.textContent = '⏳ Esecuzione in corso...';
+
+            try {
+                const response = await fetch(`${url}/functions/v1/gmail-checker`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                console.log('Response:', data);
+
+                let output = '';
+                output += `📊 STATUS: ${response.status} ${response.statusText}\n`;
+                output += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+                if (data.error) {
+                    output += `❌ ERRORE: ${data.error}\n`;
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = `❌ Errore: ${data.error}`;
+                } else {
+                    output += `✅ Vendite processate: ${data.processed || 0}\n\n`;
+                    output += `📋 LOG DETTAGLIATI:\n`;
+                    output += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+                    if (data.logs && data.logs.length > 0) {
+                        data.logs.forEach(log => {
+                            output += formatLog(log) + '\n';
+                        });
+                    } else {
+                        output += '(Nessun log disponibile)\n';
+                    }
+
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = `✅ Completato! Vendite processate: ${data.processed || 0}`;
+                }
+
+                logsDiv.innerHTML = output;
+
+            } catch (error) {
+                logsDiv.innerHTML = `❌ Errore di connessione: ${error.message}\n\nVerifica:\n1. L'URL di Supabase è corretto\n2. La funzione gmail-checker è stata deployata\n3. L'Anon Key è valida`;
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ Errore di connessione`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🚀 Esegui Test Gmail Checker';
+        }
+
+        async function checkEmailAccount() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+
+            if (!url || !key) {
+                alert('Inserisci URL e Key di Supabase!');
+                return;
+            }
+
+            const logsDiv = document.getElementById('logs');
+            const statusDiv = document.getElementById('statusDiv');
+
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status loading';
+            statusDiv.textContent = '⏳ Verificando account email...';
+
+            try {
+                // Query email_accounts table
+                const response = await fetch(`${url}/rest/v1/email_accounts?select=*`, {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                });
+
+                const accounts = await response.json();
+
+                let output = `📧 ACCOUNT EMAIL CONFIGURATI:\n`;
+                output += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+                if (accounts.length === 0) {
+                    output += `❌ Nessun account email configurato!\n`;
+                    output += `\nDevi configurare un account Gmail nell'app.\n`;
+                } else {
+                    accounts.forEach((acc, i) => {
+                        output += `${i + 1}. ${acc.email}\n`;
+                        output += `   - Attivo: ${acc.active ? '✅ Sì' : '❌ No'}\n`;
+                        output += `   - Provider: ${acc.provider || 'N/A'}\n`;
+                        output += `   - Ultimo check: ${acc.last_checked || 'Mai'}\n`;
+
+                        if (acc.imap_host) {
+                            try {
+                                const tokens = JSON.parse(acc.imap_host);
+                                const expiresAt = tokens.expires_at;
+                                const now = Date.now();
+                                const isExpired = now >= expiresAt;
+                                output += `   - Token OAuth: ${isExpired ? '❌ SCADUTO' : '✅ Valido'}\n`;
+                                if (isExpired) {
+                                    output += `   - Scaduto da: ${Math.round((now - expiresAt) / 60000)} minuti\n`;
+                                } else {
+                                    output += `   - Scade tra: ${Math.round((expiresAt - now) / 60000)} minuti\n`;
+                                }
+                            } catch (e) {
+                                output += `   - Token: ⚠️ Formato non valido\n`;
+                            }
+                        } else {
+                            output += `   - OAuth: ❌ NON CONFIGURATO\n`;
+                        }
+                        output += `\n`;
+                    });
+                }
+
+                // Also check platforms
+                const platformsResponse = await fetch(`${url}/rest/v1/platforms?select=*`, {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                });
+                const platforms = await platformsResponse.json();
+
+                output += `\n🏪 PIATTAFORME CONFIGURATE:\n`;
+                output += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                platforms.forEach(p => {
+                    output += `- ${p.name}: ${p.active ? '✅ Attiva' : '❌ Disattiva'} (pattern: ${p.email_pattern || 'N/A'})\n`;
+                });
+
+                logsDiv.innerHTML = output;
+                statusDiv.className = 'status success';
+                statusDiv.textContent = `✅ Verifica completata`;
+
+            } catch (error) {
+                logsDiv.innerHTML = `❌ Errore: ${error.message}`;
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ Errore`;
+            }
+        }
+    </script>
+</body>
+
+</html>
