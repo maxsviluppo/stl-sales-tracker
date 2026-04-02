@@ -1,320 +1,171 @@
-// Advanced Analytics with Charts and Comparisons
-
+// Advanced Analytics - Logic completamente client-side (no DB views)
 let comparisonChart = null;
 let revenueDistChart = null;
 let salesDistChart = null;
 let currentChartType = 'line';
+let allSalesData = []; // Cache dei dati
 
-// Platform colors
 const platformColors = {
-    'Cults3D': '#6366f1',
-    'Pixup': '#10b981',
-    'CGTrader': '#f59e0b',
-    '3DExport': '#ec4899'
+    'Cults3D':  { main: '#6366f1', bg: 'rgba(99, 102, 241, 0.15)' },
+    'Pixup':    { main: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+    'CGTrader': { main: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+    '3DExport': { main: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' }
 };
 
+// Recupera il client Supabase in modo sicuro
+function getSupabase() {
+    const client = window.supabase;
+    if (!client || typeof client.from !== 'function') {
+        throw new Error('Client Supabase non inizializzato. Ricarica la pagina.');
+    }
+    return client;
+}
+
+// Helper: data locale YYYY-MM-DD
+function localDateStr(date) {
+    const offset = date.getTimezoneOffset();
+    const local = new Date(date.getTime() - offset * 60000);
+    return local.toISOString().split('T')[0];
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadAllAnalytics();
     setupEventListeners();
+    await loadAllAnalytics();
 });
 
+// Attendi che window.supabase sia un client valido (max 5s)
+async function waitForSupabase() {
+    const maxWait = 5000;
+    const interval = 50;
+    let elapsed = 0;
+    while (elapsed < maxWait) {
+        const client = window.supabase;
+        if (client && typeof client.from === 'function') return client;
+        await new Promise(r => setTimeout(r, interval));
+        elapsed += interval;
+    }
+    throw new Error('Timeout: Supabase non disponibile. Verifica la connessione e ricarica.');
+}
+
 async function loadAllAnalytics() {
+    showLoading();
     try {
-        await loadPlatformsSummary();
-        await loadComparisonChart();
-        await loadDistributionCharts();
-        await loadTopProducts();
-        await loadProductsByPlatform();
-        await populatePlatformFilter();
-    } catch (error) {
-        console.error('Error loading analytics:', error);
+        const db = await waitForSupabase();
+
+        const { data, error } = await db
+            .from('sales')
+            .select('id, amount, sale_date, product_name, platforms(name)')
+            .order('sale_date', { ascending: false });
+
+        if (error) throw error;
+        allSalesData = data || [];
+
+        renderComparisonChart();
+        renderDistributionCharts();
+        renderTopProducts();
+        renderProductsByPlatform();
+        populatePlatformFilter();
+
+    } catch (err) {
+        console.error('❌ Analytics error:', err);
+        showError('Errore: ' + err.message);
     }
 }
 
-async function loadPlatformsSummary() {
-    const { data, error } = await supabase
-        .from('platform_performance_summary')
-        .select('*')
-        .order('total_revenue', { ascending: false });
 
-    if (error) {
-        console.error('Error:', error);
-        return;
-    }
 
-    const container = document.getElementById('platforms-summary');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    // Prepare data for all platforms
-    const platformsData = [];
-
-    for (const platform of data) {
-        // Get daily stats
-        const { data: dailyData } = await supabase
-            .from('platform_stats_daily')
-            .select('*')
-            .eq('platform_id', platform.id)
-            .eq('sale_day', new Date().toISOString().split('T')[0])
-            .maybeSingle();
-
-        // Get monthly stats
-        const { data: monthlyData } = await supabase
-            .from('platform_stats_monthly')
-            .select('*')
-            .eq('platform_id', platform.id)
-            .gte('month', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
-            .maybeSingle();
-
-        // Get yearly stats
-        const { data: yearlyData } = await supabase
-            .from('platform_stats_yearly')
-            .select('*')
-            .eq('platform_id', platform.id)
-            .gte('year', new Date(new Date().getFullYear(), 0, 1).toISOString())
-            .maybeSingle();
-
-        const color = platformColors[platform.name] || '#6366f1';
-
-        platformsData.push({
-            name: platform.name,
-            color: color,
-            uniqueProducts: platform.unique_products || 0,
-            daily: {
-                sales: dailyData?.total_sales || 0,
-                revenue: dailyData?.total_amount || 0
-            },
-            monthly: {
-                sales: monthlyData?.total_sales || 0,
-                revenue: monthlyData?.total_amount || 0
-            },
-            yearly: {
-                sales: yearlyData?.total_sales || 0,
-                revenue: yearlyData?.total_amount || 0
-            }
-        });
-    }
-
-    // Create carousel structure
-    let html = `
-        <div class="platforms-carousel-wrapper">
-            <div class="platforms-carousel" id="platforms-carousel">
-                <!-- Daily Slide -->
-                <div class="carousel-slide active">
-                    <h4 class="carousel-slide-title">Giornaliero</h4>
-                    <div class="platforms-cards">
-                        ${platformsData.map(p => `
-                            <div class="platform-card">
-                                <div class="platform-card-header">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${p.color};"></div>
-                                        <strong>${p.name}</strong>
-                                    </div>
-                                </div>
-                                <div class="platform-card-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-label">Vendite</span>
-                                        <span class="stat-value">${p.daily.sales}</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Ricavo</span>
-                                        <span class="stat-value highlight">€${p.daily.revenue.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                <!-- Monthly Slide -->
-                <div class="carousel-slide">
-                    <h4 class="carousel-slide-title">Mensile</h4>
-                    <div class="platforms-cards">
-                        ${platformsData.map(p => `
-                            <div class="platform-card">
-                                <div class="platform-card-header">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${p.color};"></div>
-                                        <strong>${p.name}</strong>
-                                    </div>
-                                </div>
-                                <div class="platform-card-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-label">Vendite</span>
-                                        <span class="stat-value">${p.monthly.sales}</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Ricavo</span>
-                                        <span class="stat-value highlight">€${p.monthly.revenue.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                <!-- Yearly Slide -->
-                <div class="carousel-slide">
-                    <h4 class="carousel-slide-title">Annuale</h4>
-                    <div class="platforms-cards">
-                        ${platformsData.map(p => `
-                            <div class="platform-card">
-                                <div class="platform-card-header">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${p.color};"></div>
-                                        <strong>${p.name}</strong>
-                                    </div>
-                                    <span class="products-badge">${p.uniqueProducts} prodotti</span>
-                                </div>
-                                <div class="platform-card-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-label">Vendite</span>
-                                        <span class="stat-value">${p.yearly.sales}</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Ricavo</span>
-                                        <span class="stat-value highlight">€${p.yearly.revenue.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Carousel Dots -->
-            <div class="carousel-dots">
-                <span class="dot active" data-slide="0"></span>
-                <span class="dot" data-slide="1"></span>
-                <span class="dot" data-slide="2"></span>
-            </div>
-        </div>
-    `;
-
-    container.innerHTML = html;
-
-    // Initialize carousel
-    initPlatformsCarousel();
-}
-
-async function loadComparisonChart() {
+// ─────────────────────────────────────────
+// SEZIONE 2: Grafico Confronto nel Tempo
+// ─────────────────────────────────────────
+function renderComparisonChart() {
     const metric = document.getElementById('chart-metric')?.value || 'revenue';
     const days = parseInt(document.getElementById('chart-timeframe')?.value || '30');
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - days + 1);
 
-    const { data: platforms } = await supabase.from('platforms').select('*');
-    if (!platforms) return;
+    // Genera array di date
+    const dateLabels = [];
+    for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
+        dateLabels.push(localDateStr(new Date(d)));
+    }
 
-    const datasets = [];
+    const platforms = Object.keys(platformColors);
+    const datasets = platforms.map(pname => {
+        const salesByDay = {};
+        dateLabels.forEach(d => { salesByDay[d] = { revenue: 0, sales: 0 }; });
 
-    for (const platform of platforms) {
-        const { data } = await supabase
-            .from('platform_stats_daily')
-            .select('*')
-            .eq('platform_id', platform.id)
-            .gte('sale_day', startDate.toISOString().split('T')[0])
-            .order('sale_day', { ascending: true });
+        allSalesData.forEach(sale => {
+            if (sale.platforms?.name !== pname) return;
+            const dateStr = localDateStr(new Date(sale.sale_date));
+            if (salesByDay[dateStr] !== undefined) {
+                salesByDay[dateStr].revenue += parseFloat(sale.amount) || 0;
+                salesByDay[dateStr].sales++;
+            }
+        });
 
-        if (!data || data.length === 0) continue;
-
-        const values = data.map(d => {
-            if (metric === 'revenue') return parseFloat(d.total_amount);
-            if (metric === 'sales') return d.total_sales;
-            if (metric === 'avg') return parseFloat(d.avg_amount);
+        const values = dateLabels.map(d => {
+            if (metric === 'revenue') return salesByDay[d].revenue;
+            if (metric === 'sales')   return salesByDay[d].sales;
+            if (metric === 'avg')     return salesByDay[d].sales > 0 ? salesByDay[d].revenue / salesByDay[d].sales : 0;
             return 0;
         });
 
-        datasets.push({
-            label: platform.name,
-            data: values,
-            borderColor: platformColors[platform.name] || '#6366f1',
-            backgroundColor: (platformColors[platform.name] || '#6366f1') + '20',
-            tension: 0.4,
-            fill: currentChartType === 'line'
-        });
-    }
+        // Salta piattaforme senza dati in range
+        const hasData = values.some(v => v > 0);
+        if (!hasData) return null;
 
-    const labels = datasets[0]?.data.map((_, i) => {
-        const date = new Date(startDate);
-        date.setDate(date.getDate() + i);
-        return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
-    }) || [];
+        const color = platformColors[pname]?.main || '#6366f1';
+        return {
+            label: pname,
+            data: values,
+            borderColor: color,
+            backgroundColor: color + '20',
+            tension: 0.4,
+            fill: currentChartType === 'line',
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            borderWidth: 2
+        };
+    }).filter(Boolean);
+
+    const displayLabels = dateLabels.map(d => {
+        const [, m, day] = d.split('-');
+        return `${day}/${m}`;
+    });
 
     const ctx = document.getElementById('comparisonChart');
     if (!ctx) return;
 
-    if (comparisonChart) {
-        comparisonChart.destroy();
+    if (comparisonChart) comparisonChart.destroy();
+
+    if (datasets.length === 0) {
+        ctx.parentElement.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;"><i class="fa-solid fa-chart-area" style="font-size:3rem;margin-bottom:1rem;display:block;opacity:0.3"></i>Nessun dato nel periodo selezionato</div>';
+        return;
     }
 
     comparisonChart = new Chart(ctx, {
         type: currentChartType,
-        data: { labels, datasets },
+        data: { labels: displayLabels, datasets },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: window.innerWidth < 768 ? 1.2 : 2,
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
-            animation: {
-                duration: 800,
-                easing: 'easeInOutQuart'
-            },
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            animation: { duration: 600, easing: 'easeInOutQuart' },
             plugins: {
                 legend: {
-                    display: true,
-                    position: window.innerWidth < 768 ? 'top' : 'top',
-                    labels: {
-                        color: '#f8fafc',
-                        padding: 15,
-                        font: {
-                            size: 12,
-                            weight: '500'
-                        },
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        boxWidth: 8,
-                        boxHeight: 8
-                    }
+                    position: 'top',
+                    labels: { color: '#f8fafc', padding: 15, usePointStyle: true, pointStyle: 'circle', boxWidth: 8 }
                 },
                 tooltip: {
-                    enabled: true,
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    titleColor: '#10b981',
-                    titleFont: {
-                        size: 13,
-                        weight: 'bold'
-                    },
-                    bodyColor: '#f8fafc',
-                    bodyFont: {
-                        size: 12
-                    },
-                    borderColor: '#10b981',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: true,
+                    backgroundColor: 'rgba(15,23,42,0.95)', titleColor: '#10b981',
+                    bodyColor: '#f8fafc', borderColor: '#10b981', borderWidth: 1, padding: 12,
                     callbacks: {
-                        label: function (context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                const metric = document.getElementById('chart-metric')?.value || 'revenue';
-                                if (metric === 'revenue' || metric === 'avg') {
-                                    label += '€' + context.parsed.y.toFixed(2);
-                                } else {
-                                    label += context.parsed.y;
-                                }
-                            }
-                            return label;
+                        label: ctx => {
+                            const m = document.getElementById('chart-metric')?.value || 'revenue';
+                            const v = ctx.parsed.y;
+                            return ` ${ctx.dataset.label}: ${(m === 'sales') ? v + ' vendite' : '€' + v.toFixed(2)}`;
                         }
                     }
                 }
@@ -322,424 +173,277 @@ async function loadComparisonChart() {
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        color: '#94a3b8',
-                        font: {
-                            size: 11
-                        },
-                        callback: function (value) {
-                            const metric = document.getElementById('chart-metric')?.value || 'revenue';
-                            if (metric === 'revenue' || metric === 'avg') {
-                                return '€' + value.toFixed(0);
-                            }
-                            return value;
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(51, 65, 85, 0.5)',
-                        drawBorder: false
-                    }
+                    ticks: { color: '#94a3b8', callback: v => document.getElementById('chart-metric')?.value === 'sales' ? v : '€' + v.toFixed(0) },
+                    grid: { color: 'rgba(51,65,85,0.5)' }
                 },
                 x: {
-                    ticks: {
-                        color: '#94a3b8',
-                        font: {
-                            size: 10
-                        },
-                        maxRotation: 45,
-                        minRotation: 0
-                    },
-                    grid: {
-                        color: 'rgba(51, 65, 85, 0.3)',
-                        drawBorder: false
-                    }
+                    ticks: { color: '#94a3b8', maxRotation: 45, font: { size: 10 } },
+                    grid: { color: 'rgba(51,65,85,0.3)' }
                 }
             }
         }
     });
 }
 
-async function loadDistributionCharts() {
-    const { data } = await supabase
-        .from('platform_performance_summary')
-        .select('*')
-        .order('total_revenue', { ascending: false });
+// ─────────────────────────────────────────
+// SEZIONE 3: Grafici a Torta
+// ─────────────────────────────────────────
+function renderDistributionCharts() {
+    const platforms = Object.keys(platformColors);
+    const revenues = {};
+    const sales = {};
+    platforms.forEach(p => { revenues[p] = 0; sales[p] = 0; });
 
-    if (!data) return;
+    allSalesData.forEach(sale => {
+        const pname = sale.platforms?.name;
+        if (!revenues[pname] === undefined) return;
+        revenues[pname] = (revenues[pname] || 0) + (parseFloat(sale.amount) || 0);
+        sales[pname]    = (sales[pname] || 0) + 1;
+    });
 
-    const labels = data.map(p => p.name);
-    const revenues = data.map(p => parseFloat(p.total_revenue || 0));
-    const sales = data.map(p => p.total_sales || 0);
-    const colors = labels.map(name => platformColors[name] || '#6366f1');
-
-    // Revenue Distribution
-    const revenueCtx = document.getElementById('revenueDistChart');
-    if (revenueCtx) {
-        if (revenueDistChart) revenueDistChart.destroy();
-        revenueDistChart = new Chart(revenueCtx, {
-            type: 'doughnut',
-            data: {
-                labels,
-                datasets: [{
-                    data: revenues,
-                    backgroundColor: colors,
-                    borderWidth: 3,
-                    borderColor: '#0f172a',
-                    hoverBorderWidth: 4,
-                    hoverBorderColor: '#10b981',
-                    hoverOffset: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: window.innerWidth < 768 ? 1 : 1.8,
-                animation: {
-                    animateRotate: true,
-                    animateScale: true,
-                    duration: 1000,
-                    easing: 'easeInOutQuart'
-                },
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            color: '#f8fafc',
-                            padding: 12,
-                            font: {
-                                size: 11
-                            },
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        titleColor: '#10b981',
-                        bodyColor: '#f8fafc',
-                        borderColor: '#10b981',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: true,
-                        callbacks: {
-                            label: (context) => {
-                                const label = context.label || '';
-                                const value = context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `${label}: €${value.toFixed(2)} (${percentage}%)`;
-                            }
-                        }
+    const labels = platforms;
+    const colors = platforms.map(p => platformColors[p]?.main || '#6366f1');
+    const doughnutOptions = (suffix) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { animateRotate: true, animateScale: true, duration: 800 },
+        plugins: {
+            legend: { position: 'bottom', labels: { color: '#f8fafc', padding: 10, usePointStyle: true, font: { size: 11 } } },
+            tooltip: {
+                backgroundColor: 'rgba(15,23,42,0.95)', titleColor: '#10b981',
+                bodyColor: '#f8fafc', borderColor: '#10b981', borderWidth: 1, padding: 10,
+                callbacks: {
+                    label: ctx => {
+                        const total = ctx.dataset.data.reduce((a,b) => a+b, 0);
+                        const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                        return ` ${ctx.label}: ${suffix === '€' ? '€' + ctx.parsed.toFixed(2) : ctx.parsed + ' vendite'} (${pct}%)`;
                     }
                 }
             }
+        }
+    });
+
+    const revCtx = document.getElementById('revenueDistChart');
+    if (revCtx) {
+        if (revenueDistChart) revenueDistChart.destroy();
+        revenueDistChart = new Chart(revCtx, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data: platforms.map(p => revenues[p] || 0), backgroundColor: colors, borderWidth: 3, borderColor: '#0f172a', hoverOffset: 8 }] },
+            options: doughnutOptions('€')
         });
     }
 
-    // Sales Distribution
-    const salesCtx = document.getElementById('salesDistChart');
-    if (salesCtx) {
+    const salCtx = document.getElementById('salesDistChart');
+    if (salCtx) {
         if (salesDistChart) salesDistChart.destroy();
-        salesDistChart = new Chart(salesCtx, {
+        salesDistChart = new Chart(salCtx, {
             type: 'doughnut',
-            data: {
-                labels,
-                datasets: [{
-                    data: sales,
-                    backgroundColor: colors,
-                    borderWidth: 3,
-                    borderColor: '#0f172a',
-                    hoverBorderWidth: 4,
-                    hoverBorderColor: '#10b981',
-                    hoverOffset: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: window.innerWidth < 768 ? 1 : 1.8,
-                animation: {
-                    animateRotate: true,
-                    animateScale: true,
-                    duration: 1000,
-                    easing: 'easeInOutQuart'
-                },
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            color: '#f8fafc',
-                            padding: 12,
-                            font: {
-                                size: 11
-                            },
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        titleColor: '#10b981',
-                        bodyColor: '#f8fafc',
-                        borderColor: '#10b981',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: true,
-                        callbacks: {
-                            label: (context) => {
-                                const label = context.label || '';
-                                const value = context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `${label}: ${value} vendite (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
+            data: { labels, datasets: [{ data: platforms.map(p => sales[p] || 0), backgroundColor: colors, borderWidth: 3, borderColor: '#0f172a', hoverOffset: 8 }] },
+            options: doughnutOptions('n')
         });
     }
 }
 
-async function loadTopProducts() {
-    const { data, error } = await supabase
-        .from('top_products_overall')
-        .select('*')
-        .limit(20);
+// ─────────────────────────────────────────
+// SEZIONE 4: Top Prodotti
+// ─────────────────────────────────────────
+// ─────────────────────────────────────────
+// SEZIONE 4: Top Prodotti (con Ordinamento)
+// ─────────────────────────────────────────
+function renderTopProducts() {
+    const sortMode = document.getElementById('top-products-sort')?.value || 'revenue';
+    const productMap = {};
 
-    if (error) {
-        console.error('Error:', error);
-        return;
-    }
+    allSalesData.forEach(sale => {
+        const name = sale.product_name || 'N/D';
+        const pname = sale.platforms?.name || 'N/D';
+        const amt = parseFloat(sale.amount) || 0;
+
+        if (!productMap[name]) {
+            productMap[name] = { name: name, revenue: 0, sales: 0, platforms: new Set() };
+        }
+        productMap[name].revenue += amt;
+        productMap[name].sales++;
+        productMap[name].platforms.add(pname);
+    });
+
+    const sorted = Object.values(productMap).sort((a, b) => {
+        return sortMode === 'revenue' ? b.revenue - a.revenue : b.sales - a.sales;
+    }).slice(0, 20);
 
     const tbody = document.getElementById('top-products-body');
     if (!tbody) return;
 
-    tbody.innerHTML = '';
-
-    if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">Nessun prodotto trovato</td></tr>';
+    if (sorted.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;">Nessun dato</td></tr>';
         return;
     }
 
-    data.forEach((product, index) => {
-        const row = `
-            <tr>
-                <td>
-                    <span style="background: ${index < 3 ? 'var(--accent-color)' : '#334155'}; color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 600;">
-                        ${index + 1}
-                    </span>
-                </td>
-                <td><strong>${product.product_name}</strong></td>
-                <td>${product.total_sales}</td>
-                <td style="color: var(--accent-color); font-weight: 600;">€${product.total_revenue.toFixed(2)}</td>
-                <td>€${product.avg_price.toFixed(2)}</td>
-                <td><span style="font-size: 0.875rem; color: #94a3b8;">${product.platforms || 'N/A'}</span></td>
-            </tr>
-        `;
-        tbody.innerHTML += row;
-    });
+    tbody.innerHTML = sorted.map((p, i) => `
+        <tr class="product-row-mobile">
+            <td class="desktop-only text-center">
+                <span class="rank-badge ${i < 3 ? 'top-rank' : ''}">${i + 1}</span>
+            </td>
+            <td class="product-info-cell">
+                <div class="mobile-rank-header">
+                    <span class="rank-badge ${i < 3 ? 'top-rank' : ''}">${i + 1}</span>
+                    <strong class="product-name-text">${p.name}</strong>
+                </div>
+                <div class="product-meta-row">
+                    <span class="meta-label"><i class="fa-solid fa-layer-group"></i> ${[...p.platforms].join(', ')}</span>
+                </div>
+            </td>
+            <td class="stat-cell" data-label="Pezzi">
+                <span class="stat-main">${p.sales}</span>
+                <span class="stat-sub">venduti</span>
+            </td>
+            <td class="stat-cell" data-label="Ricavo">
+                <span class="stat-main accent-color">€${p.revenue.toFixed(2)}</span>
+            </td>
+            <td class="desktop-only">
+                <span class="platform-tags">${[...p.platforms].join(' · ')}</span>
+            </td>
+        </tr>
+    `).join('');
 }
 
-async function loadProductsByPlatform(platformId = null) {
-    let query = supabase
-        .from('product_performance')
-        .select('*')
-        .order('total_revenue', { ascending: false });
+// ─────────────────────────────────────────
+// SEZIONE 5: Dettaglio Piattaforme (Ordinato)
+// ─────────────────────────────────────────
+function renderProductsByPlatform(platformFilter = null) {
+    const sortMode = document.getElementById('platform-products-sort')?.value || 'revenue';
+    const productMap = {};
 
-    if (platformId) {
-        const { data: platform } = await supabase
-            .from('platforms')
-            .select('name')
-            .eq('id', platformId)
-            .single();
+    allSalesData.forEach(sale => {
+        const pname = sale.platforms?.name || 'N/D';
+        if (platformFilter && pname !== platformFilter) return;
 
-        if (platform) {
-            query = query.eq('platform_name', platform.name);
+        const name = sale.product_name || 'N/D';
+        const amt = parseFloat(sale.amount) || 0;
+        const date = localDateStr(new Date(sale.sale_date));
+        const key = `${pname}::${name}`;
+
+        if (!productMap[key]) {
+            productMap[key] = { name, platform: pname, revenue: 0, sales: 0, first: date, last: date };
         }
-    }
+        productMap[key].revenue += amt;
+        productMap[key].sales++;
+        if (date < productMap[key].first) productMap[key].first = date;
+        if (date > productMap[key].last) productMap[key].last = date;
+    });
 
-    const { data, error } = await query.limit(100);
-
-    if (error) {
-        console.error('Error:', error);
-        return;
-    }
+    const sorted = Object.values(productMap).sort((a, b) => {
+        return sortMode === 'revenue' ? b.revenue - a.revenue : b.sales - a.sales;
+    }).slice(0, 100);
 
     const tbody = document.getElementById('products-by-platform-body');
     if (!tbody) return;
 
-    tbody.innerHTML = '';
-
-    if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #94a3b8;">Nessun prodotto trovato</td></tr>';
+    if (sorted.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;">Nessun dato</td></tr>';
         return;
     }
 
-    data.forEach(product => {
-        const firstSale = new Date(product.first_sale).toLocaleDateString('it-IT');
-        const lastSale = new Date(product.last_sale).toLocaleDateString('it-IT');
-        const color = platformColors[product.platform_name] || '#6366f1';
+    const fmt = d => d ? d.split('-').reverse().slice(0, 2).join('/') : '—';
+    const color = p => platformColors[p]?.main || '#94a3b8';
 
-        const row = `
-            <tr>
-                <td>${product.product_name}</td>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background: ${color};"></div>
-                        <span class="status-badge status-completed">${product.platform_name}</span>
-                    </div>
-                </td>
-                <td>${product.times_sold}</td>
-                <td style="color: var(--accent-color); font-weight: 600;">€${product.total_revenue.toFixed(2)}</td>
-                <td>€${product.avg_price.toFixed(2)}</td>
-                <td style="font-size: 0.875rem; color: #94a3b8;">${firstSale}</td>
-                <td style="font-size: 0.875rem; color: #94a3b8;">${lastSale}</td>
-            </tr>
-        `;
-        tbody.innerHTML += row;
-    });
+    tbody.innerHTML = sorted.map(p => `
+        <tr class="product-row-mobile">
+            <td class="product-info-cell">
+                <strong class="product-name-text">${p.name}</strong>
+                <div class="mobile-platform-box" style="color: ${color(p.platform)}; border-color: ${color(p.platform)}22; background: ${color(p.platform)}11;">
+                    ${p.platform}
+                </div>
+            </td>
+            <td class="desktop-only">
+                <span class="platform-badge" style="background:${color(p.platform)}22; color:${color(p.platform)}">${p.platform}</span>
+            </td>
+            <td class="stat-cell" data-label="N.">
+                <span class="stat-main">${p.sales}</span>
+            </td>
+            <td class="stat-cell" data-label="Ricavo">
+                <span class="stat-main accent-color">€${p.revenue.toFixed(2)}</span>
+            </td>
+            <td class="stat-cell desktop-only" data-label="Periodo">
+                <span class="date-text">${fmt(p.first)} — ${fmt(p.last)}</span>
+            </td>
+        </tr>
+    `).join('');
 }
 
-async function populatePlatformFilter() {
-    const { data } = await supabase.from('platforms').select('*').order('name');
-    const filter = document.getElementById('platform-filter');
-    if (!filter || !data) return;
-
-    filter.innerHTML = '<option value="">Tutte le piattaforme</option>';
-    data.forEach(p => {
-        filter.innerHTML += `<option value="${p.id}">${p.name}</option>`;
-    });
-}
-
+// ─────────────────────────────────────────
+// Event Listeners
+// ─────────────────────────────────────────
 function setupEventListeners() {
-    // Chart controls
-    const metricSelect = document.getElementById('chart-metric');
-    const timeframeSelect = document.getElementById('chart-timeframe');
-    const lineBtn = document.getElementById('chart-type-line');
-    const barBtn = document.getElementById('chart-type-bar');
-
-    if (metricSelect) {
-        metricSelect.addEventListener('change', loadComparisonChart);
-    }
-
-    if (timeframeSelect) {
-        timeframeSelect.addEventListener('change', loadComparisonChart);
-    }
-
-    if (lineBtn) {
-        lineBtn.addEventListener('click', () => {
-            currentChartType = 'line';
-            lineBtn.style.color = 'var(--accent-color)';
-            if (barBtn) barBtn.style.color = '';
-            loadComparisonChart();
-        });
-    }
-
-    if (barBtn) {
-        barBtn.addEventListener('click', () => {
-            currentChartType = 'bar';
-            barBtn.style.color = 'var(--accent-color)';
-            if (lineBtn) lineBtn.style.color = '';
-            loadComparisonChart();
-        });
-    }
-
-    // Platform filter
-    const platformFilter = document.getElementById('platform-filter');
-    if (platformFilter) {
-        platformFilter.addEventListener('change', (e) => {
-            loadProductsByPlatform(e.target.value || null);
-        });
-    }
-
-    // Refresh button
+    const metricSel = document.getElementById('chart-metric');
+    const timeSel   = document.getElementById('chart-timeframe');
+    const lineBtn   = document.getElementById('chart-type-line');
+    const barBtn    = document.getElementById('chart-type-bar');
+    const platFilt  = document.getElementById('platform-filter');
     const refreshBtn = document.getElementById('refresh-analytics-btn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', async () => {
-            const icon = refreshBtn.querySelector('i');
-            icon.classList.add('fa-spin');
-            await loadAllAnalytics();
-            setTimeout(() => icon.classList.remove('fa-spin'), 1000);
-        });
-    }
-}
 
-// Platforms Carousel Logic
-function initPlatformsCarousel() {
-    const carousel = document.getElementById('platforms-carousel');
-    const slides = carousel?.querySelectorAll('.carousel-slide');
-    const dots = document.querySelectorAll('.carousel-dots .dot');
+    const topSort   = document.getElementById('top-products-sort');
+    const platSort  = document.getElementById('platform-products-sort');
 
-    if (!carousel || !slides || slides.length === 0) return;
+    metricSel?.addEventListener('change', renderComparisonChart);
+    timeSel?.addEventListener('change', renderComparisonChart);
 
-    let currentSlide = 0;
-    let startX = 0;
-    let isDragging = false;
+    topSort?.addEventListener('change', renderTopProducts);
+    platSort?.addEventListener('change', () => renderProductsByPlatform(platFilt.value));
 
-    // Go to specific slide
-    function goToSlide(index) {
-        if (index < 0 || index >= slides.length) return;
-
-        // Update dots
-        dots.forEach((dot, i) => {
-            dot.classList.toggle('active', i === index);
-        });
-
-        currentSlide = index;
-
-        // Translate carousel
-        carousel.style.transform = `translateX(-${index * 100}%)`;
-    }
-
-    // Touch/Mouse events for swipe
-    function handleStart(e) {
-        startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
-        isDragging = true;
-        carousel.style.transition = 'none';
-    }
-
-    function handleMove(e) {
-        if (!isDragging) return;
-
-        const currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
-        const diff = startX - currentX;
-        const threshold = 50; // Minimum swipe distance
-
-        if (Math.abs(diff) > threshold) {
-            if (diff > 0 && currentSlide < slides.length - 1) {
-                // Swipe left - next slide
-                goToSlide(currentSlide + 1);
-                isDragging = false;
-            } else if (diff < 0 && currentSlide > 0) {
-                // Swipe right - previous slide
-                goToSlide(currentSlide - 1);
-                isDragging = false;
-            }
-        }
-    }
-
-    function handleEnd() {
-        isDragging = false;
-        carousel.style.transition = 'transform 0.3s ease';
-    }
-
-    // Add event listeners
-    carousel.addEventListener('touchstart', handleStart, { passive: true });
-    carousel.addEventListener('touchmove', handleMove, { passive: true });
-    carousel.addEventListener('touchend', handleEnd);
-
-    carousel.addEventListener('mousedown', handleStart);
-    carousel.addEventListener('mousemove', handleMove);
-    carousel.addEventListener('mouseup', handleEnd);
-    carousel.addEventListener('mouseleave', handleEnd);
-
-    // Dots navigation
-    dots.forEach((dot, index) => {
-        dot.addEventListener('click', () => goToSlide(index));
+    lineBtn?.addEventListener('click', () => {
+        currentChartType = 'line';
+        lineBtn.style.color = '#10b981'; barBtn.style.color = '';
+        renderComparisonChart();
+    });
+    barBtn?.addEventListener('click', () => {
+        currentChartType = 'bar';
+        barBtn.style.color = '#10b981'; lineBtn.style.color = '';
+        renderComparisonChart();
     });
 
-    // Initialize first slide
-    carousel.style.transition = 'transform 0.3s ease';
-    goToSlide(0);
+    platFilt?.addEventListener('change', e => {
+        renderProductsByPlatform(e.target.value || null);
+    });
+
+    refreshBtn?.addEventListener('click', async () => {
+        const icon = refreshBtn.querySelector('i');
+        icon?.classList.add('fa-spin');
+        await loadAllAnalytics();
+        setTimeout(() => icon?.classList.remove('fa-spin'), 800);
+    });
+
+    populatePlatformFilter();
+}
+
+// ─────────────────────────────────────────
+// SEZIONE 6: Popola Filtro
+// ─────────────────────────────────────────
+function populatePlatformFilter() {
+    const platFilt = document.getElementById('platform-filter');
+    if (!platFilt || allSalesData.length === 0) return;
+
+    const platforms = [...new Set(allSalesData.map(s => s.platforms?.name).filter(Boolean))].sort();
+    platFilt.innerHTML = '<option value="">Tutte le piattaforme</option>' +
+        platforms.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+// ─────────────────────────────────────────
+// Helpers UI
+// ─────────────────────────────────────────
+function showLoading() {
+    const container = document.getElementById('platforms-summary');
+    if (container) container.innerHTML = `
+        <div style="text-align:center;padding:3rem;color:#94a3b8;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;color:#10b981;"></i>
+            <div style="margin-top:1rem;">Caricamento analytics...</div>
+        </div>`;
+}
+function showError(msg) {
+    const container = document.getElementById('platforms-summary');
+    if (container) container.innerHTML = `
+        <div style="text-align:center;padding:2rem;color:#ef4444;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem;margin-bottom:1rem;display:block;"></i>
+            ${msg}
+        </div>`;
 }

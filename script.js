@@ -77,6 +77,21 @@ function setupEventListeners() {
             if (e.target.checked) requestNotificationPermission();
         });
     }
+
+    // Platforms Comparison Month Selector
+    const comparisonMonthSelect = document.getElementById('comparison-month-select');
+    if (comparisonMonthSelect) {
+        // Set default to last month if empty
+        if (!comparisonMonthSelect.value) {
+            const prev = new Date();
+            prev.setMonth(prev.getMonth() - 1);
+            comparisonMonthSelect.value = prev.toISOString().substring(0, 7);
+        }
+        
+        comparisonMonthSelect.addEventListener('change', async () => {
+            await loadPlatformsTableData();
+        });
+    }
 }
 
 // --- Core Data Loading ---
@@ -373,16 +388,23 @@ async function loadChartData(period = '7', startDate = null, endDate = null) {
     if (data && data.length > 0) {
         const aggregated = {};
 
-        // Initialize all days in range with 0
-        const start = new Date(queryStart);
-        const end = new Date(queryEnd);
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            aggregated[d.toISOString().split('T')[0]] = 0;
+        // Initialize all days in range with 0 (using local date arithmetic)
+        const [startY, startM, startD] = queryStart.split('-').map(Number);
+        const [endY, endM, endD] = queryEnd.split('-').map(Number);
+        
+        let currentDate = new Date(startY, startM - 1, startD);
+        const stopDate = new Date(endY, endM - 1, endD);
+
+        while (currentDate <= stopDate) {
+            const dayKey = getLocalDateString(currentDate);
+            aggregated[dayKey] = 0;
+            currentDate.setDate(currentDate.getDate() + 1);
         }
 
-        // Fill with data
+        // Fill with data (ensuring local day calculation)
         data.forEach(s => {
-            let day = s.sale_date.split('T')[0];
+            const saleDate = new Date(s.sale_date);
+            let day = getLocalDateString(saleDate);
 
             // --- FIX: Move CGTrader ~6€ sale from Dec 1 to Dec 2 ---
             if (Math.abs(s.amount - 6) < 0.1 && (s.platforms?.name || '').includes('CGTrader') && day === '2024-12-01') {
@@ -390,7 +412,9 @@ async function loadChartData(period = '7', startDate = null, endDate = null) {
             }
             // ------------------------------------------------------
 
-            if (aggregated[day] !== undefined) aggregated[day] += s.amount;
+            if (aggregated[day] !== undefined) {
+                aggregated[day] += s.amount;
+            }
         });
 
         const sortedDates = Object.keys(aggregated).sort();
@@ -623,10 +647,10 @@ async function loadPlatformsTableData() {
 
         // Initialize Stats Structure
         const stats = {
-            'Cults3D': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, total: { c: 0, a: 0 } },
-            'Pixup': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, total: { c: 0, a: 0 } },
-            'CGTrader': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, total: { c: 0, a: 0 } },
-            '3DExport': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, total: { c: 0, a: 0 } }
+            'Cults3D': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, comparison: { c: 0, a: 0 }, total: { c: 0, a: 0 } },
+            'Pixup': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, comparison: { c: 0, a: 0 }, total: { c: 0, a: 0 } },
+            'CGTrader': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, comparison: { c: 0, a: 0 }, total: { c: 0, a: 0 } },
+            '3DExport': { today: { c: 0, a: 0 }, month: { c: 0, a: 0 }, year: { c: 0, a: 0 }, comparison: { c: 0, a: 0 }, total: { c: 0, a: 0 } }
         };
 
         // Time Helpers
@@ -639,6 +663,19 @@ async function loadPlatformsTableData() {
         const todayStr = getLocalISODate(now);
         const monthStartStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
         const yearStartStr = `${now.getFullYear()}-01-01`;
+
+        // Comparison Month Range
+        const compMonthSelect = document.getElementById('comparison-month-select');
+        const compDateStr = compMonthSelect ? compMonthSelect.value : ''; // "YYYY-MM"
+        const compMonthStartStr = compDateStr ? `${compDateStr}-01` : '9999-99-99';
+        
+        // Calculate end of comparison month
+        let compMonthEndStr = '9999-99-99';
+        if (compDateStr) {
+            const [y, m] = compDateStr.split('-').map(Number);
+            const lastDay = new Date(y, m, 0).getDate();
+            compMonthEndStr = `${compDateStr}-${String(lastDay).padStart(2, '0')}`;
+        }
 
         // Aggregate
         allSales.forEach(sale => {
@@ -675,6 +712,12 @@ async function loadPlatformsTableData() {
                 stats[platformName].today.c++;
                 stats[platformName].today.a += amount;
             }
+
+            // Comparison Month
+            if (saleDateStr >= compMonthStartStr && saleDateStr <= compMonthEndStr) {
+                stats[platformName].comparison.c++;
+                stats[platformName].comparison.a += amount;
+            }
         });
 
         // Update DOM
@@ -687,13 +730,31 @@ async function loadPlatformsTableData() {
                 const cell = row.querySelector(`.platform-stat[data-period="${period}"]`);
                 if (cell) {
                     cell.querySelector('div:first-child').textContent = `€${data.a.toFixed(2)}`;
-                    cell.querySelector('div:last-child').textContent = `${data.c} vendite`;
+                    const salesCountEl = cell.querySelector('div:last-child');
+                    if (salesCountEl) salesCountEl.textContent = `${data.c} vendite`;
+
+                    // Handle Comparison Diff
+                    if (period === 'comparison') {
+                        const currentMonthAmt = stats[platform].month.a;
+                        const diff = currentMonthAmt - data.a;
+                        const diffEl = cell.querySelector('.comparison-diff');
+                        
+                        if (diffEl) {
+                            const isPositive = diff >= 0;
+                            diffEl.style.color = isPositive ? '#10b981' : '#ef4444';
+                                diffEl.innerHTML = `
+                                    <i class="fa-solid fa-${isPositive ? 'arrow-up' : 'arrow-down'}"></i>
+                                    ${isPositive ? '+' : '-'}€${Math.abs(diff).toFixed(2)} vs ora
+                                `;
+                        }
+                    }
                 }
             };
 
             updateCell('today', stats[platform].today);
             updateCell('month', stats[platform].month);
             updateCell('year', stats[platform].year);
+            updateCell('comparison', stats[platform].comparison);
             updateCell('total', stats[platform].total);
         });
 

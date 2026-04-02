@@ -18,6 +18,59 @@
     <link rel="stylesheet" href="stats-enhanced.css">
     <link rel="stylesheet" href="platforms-table.css">
     <link rel="stylesheet" href="history.css">
+    <style>
+    /* ── Bottom Mobile Navigation Bar ── */
+    .mobile-bottom-nav {
+        display: none;
+    }
+    @media (max-width: 768px) {
+        .mobile-bottom-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            z-index: 9990;
+            padding: 0.5rem 0 max(0.5rem, env(safe-area-inset-bottom));
+            justify-content: space-around;
+            align-items: center;
+        }
+        .mobile-bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            padding: 0.4rem 0.6rem;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+        .mobile-bottom-nav a i {
+            font-size: 1.3rem;
+            transition: all 0.2s ease;
+        }
+        .mobile-bottom-nav a.active,
+        .mobile-bottom-nav a:hover {
+            color: #10b981;
+        }
+        .mobile-bottom-nav a.active i {
+            filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6));
+        }
+        /* Spazio per la bottom nav */
+        .main-content {
+            padding-bottom: 80px !important;
+        }
+    }
+    </style>
 </head>
 
 <body>
@@ -308,6 +361,15 @@
                                 <input type="date" id="platforms-date-end"
                                     style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 8px; font-size: 0.9rem;">
                             </div>
+
+                            <!-- Comparison Month Selector (Added) -->
+                            <div style="position: relative; display: flex; align-items: center; gap: 0.5rem; background: rgba(16, 185, 129, 0.05); padding: 0.4rem 0.8rem; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.1);">
+                                <label for="comparison-month-select" style="font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap;">
+                                    <i class="fa-solid fa-code-compare"></i> Mese Confronto:
+                                </label>
+                                <input type="month" id="comparison-month-select" 
+                                    style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.3rem 0.5rem; border-radius: 8px; font-size: 0.9rem; font-family: inherit; cursor: pointer;">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -332,6 +394,10 @@
                                 <th
                                     style="text-align: center; padding: 1rem; color: var(--text-secondary); font-weight: 600;">
                                     <i class="fa-solid fa-calendar"></i> Quest'Anno
+                                </th>
+                                <th
+                                    style="text-align: center; padding: 1rem; color: var(--text-secondary); font-weight: 600; background: rgba(16, 185, 129, 0.03);">
+                                    <i class="fa-solid fa-code-compare"></i> Confronto Mese
                                 </th>
                                 <th
                                     style="text-align: center; padding: 1rem; color: var(--text-secondary); font-weight: 600;">
@@ -372,6 +438,13 @@
                                     <div class="platform-stat" data-period="year" data-platform="Cults3D">
                                         <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">€0.00</div>
                                         <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem; background: rgba(59, 130, 246, 0.03);">
+                                    <div class="platform-stat comparison-stat" data-period="comparison" data-platform="Cults3D">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                        <div class="comparison-diff" style="font-size: 0.75rem; margin-top: 0.2rem; font-weight: 600;"></div>
                                     </div>
                                 </td>
                                 <td style="text-align: center; padding: 1rem;">
@@ -416,6 +489,13 @@
                                         <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
                                     </div>
                                 </td>
+                                <td style="text-align: center; padding: 1rem; background: rgba(16, 185, 129, 0.03);">
+                                    <div class="platform-stat comparison-stat" data-period="comparison" data-platform="Pixup">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                        <div class="comparison-diff" style="font-size: 0.75rem; margin-top: 0.2rem; font-weight: 600;"></div>
+                                    </div>
+                                </td>
                                 <td style="text-align: center; padding: 1rem;">
                                     <div class="platform-stat" data-period="total" data-platform="Pixup">
                                         <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;">€0.00</div>
@@ -458,6 +538,13 @@
                                         <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
                                     </div>
                                 </td>
+                                <td style="text-align: center; padding: 1rem; background: rgba(245, 158, 11, 0.03);">
+                                    <div class="platform-stat comparison-stat" data-period="comparison" data-platform="CGTrader">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                        <div class="comparison-diff" style="font-size: 0.75rem; margin-top: 0.2rem; font-weight: 600;"></div>
+                                    </div>
+                                </td>
                                 <td style="text-align: center; padding: 1rem;">
                                     <div class="platform-stat" data-period="total" data-platform="CGTrader">
                                         <div style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;">€0.00</div>
@@ -497,6 +584,13 @@
                                     <div class="platform-stat" data-period="year" data-platform="3DExport">
                                         <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;">€0.00</div>
                                         <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 1rem; background: rgba(139, 92, 246, 0.03);">
+                                    <div class="platform-stat comparison-stat" data-period="comparison" data-platform="3DExport">
+                                        <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;">€0.00</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">0 vendite</div>
+                                        <div class="comparison-diff" style="font-size: 0.75rem; margin-top: 0.2rem; font-weight: 600;"></div>
                                     </div>
                                 </td>
                                 <td style="text-align: center; padding: 1rem;">
@@ -680,6 +774,30 @@
         </div>
     </div>
 
+    <!-- Bottom Navigation Bar (Mobile Only) -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <a href="#" id="bnav-dashboard" data-page="dashboard" class="active">
+            <i class="fa-solid fa-gauge-high"></i>
+            <span>Home</span>
+        </a>
+        <a href="#" id="bnav-platforms" data-page="platforms">
+            <i class="fa-solid fa-layer-group"></i>
+            <span>Piattaforme</span>
+        </a>
+        <a href="analytics.html" id="bnav-analytics">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>Analytics</span>
+        </a>
+        <a href="#" id="bnav-history" data-page="history">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Storico</span>
+        </a>
+        <a href="#" id="bnav-settings" data-page="settings">
+            <i class="fa-solid fa-gear"></i>
+            <span>Settings</span>
+        </a>
+    </nav>
+
     <audio id="cash-sound" src="cash-register-kaching-376867.mp3" preload="auto"></audio>
 
     <!-- Initialize Supabase client -->
@@ -688,6 +806,22 @@
     <script src="backup-restore.js" defer></script>
     <script src="script.js" defer></script>
     <script src="mobile-menu.js" defer></script>
+    <script>
+    // Bottom nav routing
+    document.querySelectorAll('.mobile-bottom-nav a[data-page]').forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            const page = link.dataset.page;
+            // Show view
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            const target = document.getElementById(page + '-view');
+            if (target) target.classList.add('active');
+            // Update active state
+            document.querySelectorAll('.mobile-bottom-nav a').forEach(a => a.classList.remove('active'));
+            link.classList.add('active');
+        });
+    });
+    </script>
 </body>
 
 </html>
