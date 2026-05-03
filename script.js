@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupMobileHeader(); // Add Settings Button
     setupHistoryView(); // Initialize History View Listeners
     setupBackupRestore(); // Initialize Backup & Restore
+    setupMonthlyView(); // Initialize Monthly Income View
 
     // Initial Data Load
     await loadDashboardData();
@@ -617,6 +618,10 @@ function setupNavigation() {
             // Load data if switching to history
             if (pageId === 'history') {
                 loadHistoryTableData();
+            }
+            // Load monthly income data when switching to that view
+            if (pageId === 'monthly') {
+                loadMonthlyIncomeData();
             }
         });
     });
@@ -1359,4 +1364,325 @@ async function loadHistoryTableData() {
         console.error('Error loading history:', error);
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 2rem; color: #ef4444;">Errore nel caricamento dati</td></tr>';
     }
+}
+
+// =============================================================
+// --- Monthly Income View ---
+// =============================================================
+
+let monthlyChart = null;
+let monthlyAllSales = null; // cached data
+
+const MONTH_NAMES = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+const MONTH_NAMES_FULL = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+const PLATFORM_COLORS = {
+    'Cults3D':  { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.3)' },
+    'Pixup':    { color: '#10b981', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.3)' },
+    'CGTrader': { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)' },
+    '3DExport': { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.3)' },
+};
+
+function setupMonthlyView() {
+    // Populate year selector
+    const yearSelect = document.getElementById('monthly-year-select');
+    if (!yearSelect) return;
+
+    const currentYear = new Date().getFullYear();
+    // Show last 4 years
+    for (let y = currentYear; y >= currentYear - 3; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        yearSelect.appendChild(opt);
+    }
+
+    yearSelect.addEventListener('change', () => loadMonthlyIncomeData());
+}
+
+async function loadMonthlyIncomeData() {
+    const yearSelect = document.getElementById('monthly-year-select');
+    const selectedYear = yearSelect ? parseInt(yearSelect.value) : new Date().getFullYear();
+    const prevYear = selectedYear - 1;
+
+    // Update legends
+    const legendCurrent = document.getElementById('monthly-legend-current');
+    const legendPrev = document.getElementById('monthly-legend-prev');
+    if (legendCurrent) legendCurrent.textContent = selectedYear;
+    if (legendPrev) legendPrev.textContent = prevYear;
+
+    // Fetch all sales for both years
+    const fetchStart = `${prevYear}-01-01`;
+    const fetchEnd   = `${selectedYear}-12-31T23:59:59`;
+
+    const { data, error } = await supabase
+        .from('sales')
+        .select('amount, sale_date, platforms(name)')
+        .gte('sale_date', fetchStart)
+        .lte('sale_date', fetchEnd);
+
+    if (error) {
+        console.error('Monthly income error:', error);
+        return;
+    }
+
+    monthlyAllSales = data || [];
+
+    // Aggregate by year+month and by platform per month
+    const aggregateCurrent = new Array(12).fill(0);  // index 0 = Jan
+    const aggregatePrev    = new Array(12).fill(0);
+    // platformByMonth[year][monthIdx][platformName] = amount
+    const platformByMonth = {};
+    platformByMonth[selectedYear] = {};
+    platformByMonth[prevYear]     = {};
+    for (let m = 0; m < 12; m++) {
+        platformByMonth[selectedYear][m] = {};
+        platformByMonth[prevYear][m]     = {};
+    }
+
+    const getLocalISODate = (date) => {
+        const offset = date.getTimezoneOffset();
+        const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+        return localDate.toISOString().split('T')[0];
+    };
+
+    monthlyAllSales.forEach(sale => {
+        const d = new Date(sale.sale_date);
+        let dateStr = getLocalISODate(d);
+        // CGTrader fix
+        if (Math.abs(sale.amount - 6) < 0.1 && (sale.platforms?.name || '').includes('CGTrader') && dateStr === '2024-12-01') {
+            dateStr = '2024-12-02';
+        }
+        const [yStr, mStr] = dateStr.split('-');
+        const y = parseInt(yStr);
+        const mIdx = parseInt(mStr) - 1; // 0-based
+        const platform = sale.platforms?.name || 'Altro';
+        const amount = sale.amount || 0;
+
+        if (y === selectedYear) {
+            aggregateCurrent[mIdx] += amount;
+            platformByMonth[selectedYear][mIdx][platform] = (platformByMonth[selectedYear][mIdx][platform] || 0) + amount;
+        } else if (y === prevYear) {
+            aggregatePrev[mIdx] += amount;
+            platformByMonth[prevYear][mIdx][platform] = (platformByMonth[prevYear][mIdx][platform] || 0) + amount;
+        }
+    });
+
+    // Totals
+    const totalCurrent = aggregateCurrent.reduce((a, b) => a + b, 0);
+    const totalPrev    = aggregatePrev.reduce((a, b) => a + b, 0);
+    const variation    = totalCurrent - totalPrev;
+    const variationPct = totalPrev > 0 ? ((variation / totalPrev) * 100).toFixed(1) : null;
+
+    const elCurrent   = document.getElementById('monthly-total-current');
+    const elPrev      = document.getElementById('monthly-total-prev');
+    const elVariation = document.getElementById('monthly-variation');
+
+    if (elCurrent)  elCurrent.textContent  = `€${totalCurrent.toFixed(2)}`;
+    if (elPrev)     elPrev.textContent     = `€${totalPrev.toFixed(2)}`;
+    if (elVariation) {
+        const isPos = variation >= 0;
+        const sign  = isPos ? '+' : '';
+        const pct   = variationPct !== null ? ` (${isPos ? '+' : ''}${variationPct}%)` : '';
+        elVariation.innerHTML = `<span style="color:${isPos ? '#10b981' : '#ef4444'}">${sign}€${Math.abs(variation).toFixed(2)}${pct}</span>`;
+    }
+
+    // Build Chart
+    const canvas = document.getElementById('monthlyIncomeChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    if (monthlyChart) monthlyChart.destroy();
+
+    const gradientCurrent = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientCurrent.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+    gradientCurrent.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
+    const gradientPrev = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientPrev.addColorStop(0, 'rgba(129, 140, 248, 0.2)');
+    gradientPrev.addColorStop(1, 'rgba(129, 140, 248, 0.0)');
+
+    monthlyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: MONTH_NAMES,
+            datasets: [
+                {
+                    label: `Incasso ${selectedYear} (€)`,
+                    data: aggregateCurrent,
+                    borderColor: '#10b981',
+                    backgroundColor: gradientCurrent,
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#10b981',
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                },
+                {
+                    label: `Incasso ${prevYear} (€)`,
+                    data: aggregatePrev,
+                    borderColor: '#818cf8',
+                    backgroundColor: gradientPrev,
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#818cf8',
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    borderDash: [6, 3],
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(10,10,20,0.9)',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: €${ctx.parsed.y.toFixed(2)}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: {
+                        color: '#94a3b8',
+                        callback: (v) => `€${v.toFixed(0)}`
+                    }
+                },
+                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+            },
+            onClick: (evt, elements) => {
+                if (elements && elements.length > 0) {
+                    const mIdx = elements[0].index;
+                    showMonthBreakdown(mIdx, selectedYear, platformByMonth);
+                }
+            }
+        }
+    });
+
+    // Build the full summary table for all months
+    buildMonthlySummaryTable(selectedYear, prevYear, aggregateCurrent, aggregatePrev, platformByMonth);
+}
+
+function showMonthBreakdown(mIdx, selectedYear, platformByMonth) {
+    const card    = document.getElementById('monthly-breakdown-card');
+    const titleEl = document.getElementById('monthly-breakdown-title');
+    const listEl  = document.getElementById('monthly-breakdown-list');
+    const totalEl = document.getElementById('monthly-breakdown-total');
+
+    if (!card || !titleEl || !listEl || !totalEl) return;
+
+    const platforms = platformByMonth[selectedYear][mIdx];
+    const total = Object.values(platforms).reduce((a, b) => a + b, 0);
+
+    titleEl.textContent = `${MONTH_NAMES_FULL[mIdx]} ${selectedYear} — Dettaglio Piattaforme`;
+    totalEl.textContent = `€${total.toFixed(2)}`;
+
+    const sorted = Object.entries(platforms).sort((a, b) => b[1] - a[1]);
+
+    listEl.innerHTML = '';
+    if (sorted.length === 0) {
+        listEl.innerHTML = '<div style="color:var(--text-secondary); text-align:center; padding:1rem;">Nessun incasso per questo mese</div>';
+    } else {
+        sorted.forEach(([name, amount]) => {
+            const pct = total > 0 ? ((amount / total) * 100).toFixed(1) : 0;
+            const pc = PLATFORM_COLORS[name] || { color: '#64748b', bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.3)' };
+            listEl.innerHTML += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.8rem 1rem; background:${pc.bg}; border:1px solid ${pc.border}; border-radius:10px;">
+                    <div style="display:flex; align-items:center; gap:0.7rem;">
+                        <div style="width:10px; height:10px; border-radius:50%; background:${pc.color};"></div>
+                        <span style="font-weight:600;">${name}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:1rem;">
+                        <span style="font-size:0.8rem; color:var(--text-secondary);">${pct}%</span>
+                        <span style="font-weight:700; color:${pc.color};">€${amount.toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function buildMonthlySummaryTable(selectedYear, prevYear, aggregateCurrent, aggregatePrev, platformByMonth) {
+    const container = document.getElementById('monthly-summary-table');
+    if (!container) return;
+
+    // Collect all platform names that appear in the current year
+    const allPlatforms = new Set();
+    for (let m = 0; m < 12; m++) {
+        Object.keys(platformByMonth[selectedYear][m]).forEach(p => allPlatforms.add(p));
+    }
+    const platforms = Array.from(allPlatforms).sort();
+
+    let html = `<div style="overflow-x:auto;">`;
+    html += `<table style="width:100%; border-collapse:collapse; font-size:0.88rem; min-width:600px;">`;
+    html += `<thead><tr style="border-bottom:2px solid var(--border-color);">`;
+    html += `<th style="text-align:left; padding:0.7rem 0.8rem; color:var(--text-secondary); font-weight:600;">Mese</th>`;
+    platforms.forEach(p => {
+        const pc = PLATFORM_COLORS[p] || { color: '#64748b' };
+        html += `<th style="text-align:right; padding:0.7rem 0.8rem; color:${pc.color}; font-weight:600;">${p}</th>`;
+    });
+    html += `<th style="text-align:right; padding:0.7rem 0.8rem; color:#10b981; font-weight:700;">Totale ${selectedYear}</th>`;
+    html += `<th style="text-align:right; padding:0.7rem 0.8rem; color:#818cf8; font-weight:600;">Totale ${prevYear}</th>`;
+    html += `<th style="text-align:right; padding:0.7rem 0.8rem; color:var(--text-secondary); font-weight:600;">Var.</th>`;
+    html += `</tr></thead><tbody>`;
+
+    for (let m = 0; m < 12; m++) {
+        const monthData  = platformByMonth[selectedYear][m];
+        const monthTotal = aggregateCurrent[m];
+        const prevTotal  = aggregatePrev[m];
+        const diff = monthTotal - prevTotal;
+        const isPos = diff >= 0;
+        const diffStr = (monthTotal === 0 && prevTotal === 0) ? '—' : `<span style="color:${isPos ? '#10b981' : '#ef4444'}">${isPos ? '+' : ''}€${Math.abs(diff).toFixed(2)}</span>`;
+
+        const rowBg = m % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
+        html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04); background:${rowBg}; cursor:pointer; transition:background 0.2s;"
+            onmouseover="this.style.background='rgba(16,185,129,0.05)'"
+            onmouseout="this.style.background='${rowBg}'">`;
+        html += `<td style="padding:0.65rem 0.8rem; font-weight:600;">${MONTH_NAMES_FULL[m]}</td>`;
+        platforms.forEach(p => {
+            const amt = monthData[p] || 0;
+            const pc = PLATFORM_COLORS[p] || { color: '#64748b' };
+            html += `<td style="text-align:right; padding:0.65rem 0.8rem; color:${amt > 0 ? pc.color : 'var(--text-secondary)'}; font-weight:${amt > 0 ? '600' : '400'};">${amt > 0 ? '€' + amt.toFixed(2) : '—'}</td>`;
+        });
+        html += `<td style="text-align:right; padding:0.65rem 0.8rem; color:#10b981; font-weight:700;">${monthTotal > 0 ? '€' + monthTotal.toFixed(2) : '—'}</td>`;
+        html += `<td style="text-align:right; padding:0.65rem 0.8rem; color:#818cf8;">${prevTotal > 0 ? '€' + prevTotal.toFixed(2) : '—'}</td>`;
+        html += `<td style="text-align:right; padding:0.65rem 0.8rem;">${diffStr}</td>`;
+        html += `</tr>`;
+    }
+
+    // Grand totals row
+    const grandTotal = aggregateCurrent.reduce((a, b) => a + b, 0);
+    const grandPrev  = aggregatePrev.reduce((a, b) => a + b, 0);
+    const grandDiff  = grandTotal - grandPrev;
+    const gIsPos = grandDiff >= 0;
+    html += `<tr style="border-top:2px solid var(--border-color); background:rgba(255,255,255,0.03);">`;
+    html += `<td style="padding:0.8rem; font-weight:700; color:var(--text-primary);">TOTALE</td>`;
+    platforms.forEach(p => {
+        const total = aggregateCurrent.reduce((sum, _, mIdx) => sum + (platformByMonth[selectedYear][mIdx][p] || 0), 0);
+        const pc = PLATFORM_COLORS[p] || { color: '#64748b' };
+        html += `<td style="text-align:right; padding:0.8rem; color:${pc.color}; font-weight:700;">${total > 0 ? '€' + total.toFixed(2) : '—'}</td>`;
+    });
+    html += `<td style="text-align:right; padding:0.8rem; color:#10b981; font-weight:700;">€${grandTotal.toFixed(2)}</td>`;
+    html += `<td style="text-align:right; padding:0.8rem; color:#818cf8; font-weight:700;">€${grandPrev.toFixed(2)}</td>`;
+    const gDiffStr = `<span style="color:${gIsPos ? '#10b981' : '#ef4444'}; font-weight:700;">${gIsPos ? '+' : ''}€${Math.abs(grandDiff).toFixed(2)}</span>`;
+    html += `<td style="text-align:right; padding:0.8rem;">${gDiffStr}</td>`;
+    html += `</tr>`;
+
+    html += `</tbody></table></div>`;
+    container.innerHTML = html;
 }

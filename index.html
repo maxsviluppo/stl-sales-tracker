@@ -97,6 +97,10 @@
                     <i class="fa-solid fa-clock-rotate-left"></i>
                     <span>Storico</span>
                 </a>
+                <a href="#" class="nav-item" data-page="monthly">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <span>Incassi Mensili</span>
+                </a>
                 <a href="#" class="nav-item" data-page="settings">
                     <i class="fa-solid fa-gear"></i>
                     <span>Impostazioni</span>
@@ -729,6 +733,84 @@
                     </div>
                 </div>
             </div>
+            <!-- Monthly Income View -->
+            <div id="monthly-view" class="view">
+                <!-- Header Card -->
+                <div class="glass" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <h2 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fa-solid fa-calendar-check" style="color: #10b981;"></i>
+                                Incassi Mensili
+                            </h2>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.3rem;">Confronto anno corrente vs anno precedente</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                            <!-- Year selector -->
+                            <div style="position: relative;">
+                                <select id="monthly-year-select" style="background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.6rem 2.5rem 0.6rem 1rem; border-radius: 10px; font-size: 0.95rem; cursor: pointer; appearance: none; min-width: 120px;">
+                                </select>
+                                <i class="fa-solid fa-chevron-down" style="position: absolute; right: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none; font-size: 0.8rem;"></i>
+                            </div>
+                            <!-- Legend -->
+                            <div style="display: flex; gap: 1rem; align-items: center; font-size: 0.85rem;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <div style="width: 18px; height: 3px; background: #10b981; border-radius: 2px;"></div>
+                                    <span id="monthly-legend-current" style="color: var(--text-secondary);">Anno corrente</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <div style="width: 18px; height: 3px; background: #818cf8; border-radius: 2px;"></div>
+                                    <span id="monthly-legend-prev" style="color: var(--text-secondary);">Anno precedente</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Card -->
+                <div class="glass" style="padding: 1.5rem; margin-bottom: 1.5rem; position: relative;">
+                    <!-- Summary Stats -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; padding: 1rem; text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;">Totale Anno Corrente</div>
+                            <div id="monthly-total-current" style="font-size: 1.6rem; font-weight: 700; color: #10b981;">€0.00</div>
+                        </div>
+                        <div style="background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.2); border-radius: 12px; padding: 1rem; text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;">Totale Anno Precedente</div>
+                            <div id="monthly-total-prev" style="font-size: 1.6rem; font-weight: 700; color: #818cf8;">€0.00</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem; text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;">Variazione</div>
+                            <div id="monthly-variation" style="font-size: 1.6rem; font-weight: 700;">—</div>
+                        </div>
+                    </div>
+                    <div style="height: 320px; position: relative;">
+                        <canvas id="monthlyIncomeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Month Detail: Click a month to see platform breakdown -->
+                <div id="monthly-breakdown-card" class="glass" style="padding: 1.5rem; display: none;">
+                    <h3 style="margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-layer-group" style="color: #10b981;"></i>
+                        <span id="monthly-breakdown-title">Dettaglio Mese</span>
+                    </h3>
+                    <div id="monthly-breakdown-list" style="display: flex; flex-direction: column; gap: 0.8rem;"></div>
+                    <div style="margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; color: var(--text-secondary); font-size: 0.95rem;">Totale Mese</span>
+                        <span id="monthly-breakdown-total" style="font-size: 1.4rem; font-weight: 700; color: #10b981;">€0.00</span>
+                    </div>
+                </div>
+
+                <!-- All months summary table -->
+                <div class="glass" style="padding: 1.5rem; margin-top: 1.5rem; overflow-x: auto;">
+                    <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-table" style="color: #10b981;"></i>
+                        Riepilogo Mensile per Piattaforma
+                    </h3>
+                    <div id="monthly-summary-table"></div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -788,6 +870,10 @@
             <i class="fa-solid fa-chart-line"></i>
             <span>Analytics</span>
         </a>
+        <a href="#" id="bnav-monthly" data-page="monthly">
+            <i class="fa-solid fa-calendar-check"></i>
+            <span>Incassi</span>
+        </a>
         <a href="#" id="bnav-history" data-page="history">
             <i class="fa-solid fa-clock-rotate-left"></i>
             <span>Storico</span>
@@ -819,6 +905,13 @@
             // Update active state
             document.querySelectorAll('.mobile-bottom-nav a').forEach(a => a.classList.remove('active'));
             link.classList.add('active');
+            // Trigger data load for pages that need it
+            if (page === 'monthly' && typeof loadMonthlyIncomeData === 'function') {
+                loadMonthlyIncomeData();
+            }
+            if (page === 'history' && typeof loadHistoryTableData === 'function') {
+                loadHistoryTableData();
+            }
         });
     });
     </script>
